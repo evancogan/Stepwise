@@ -108,11 +108,13 @@ class StepEditor(Vertical):
             self.steps.append(text)
             self.pseudo.append("")
             self.save()
+            self.project.log("step", action="add", index=len(self.steps), text=text)
             self.reset_input()
             await self.redraw(len(self.steps) - 1)
             self.step_list.scroll_end(animate=False)
         else:
             index, self.editing = self.editing, None
+            self.project.log("step", action="edit", index=index + 1, before=self.steps[index], text=text)
             self.steps[index] = text
             self.save()
             self.reset_input()
@@ -127,6 +129,7 @@ class StepEditor(Vertical):
         for items in (self.steps, self.pseudo):
             items[i], items[j] = items[j], items[i]
         self.save()
+        self.project.log("step", action="move", index=i + 1, to=j + 1, text=self.steps[j])
         await self.redraw(j)
 
     async def remove_step(self) -> None:
@@ -136,6 +139,7 @@ class StepEditor(Vertical):
         removed = self.steps.pop(i)
         self.pseudo.pop(i)
         self.save()
+        self.project.log("step", action="remove", index=i + 1, text=removed)
         await self.redraw(i)
         self.app.notify(f"Removed “{removed}”.", timeout=3)
         if not self.steps:

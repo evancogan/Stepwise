@@ -1,15 +1,19 @@
 """A Stepwise project on disk.
 
 Layout, inside the project folder:
-  .stepwise/state           key=value lines: name, stage (furthest stage reached)
+  .stepwise/state           key=value lines: name, stage (furthest stage reached), draft_sha
   .stepwise/steps.txt       one step per line
-  .stepwise/answers/*.txt   one file per answer: intent, s<stage>q<n>, pseudo<n>
+  .stepwise/answers/*.txt   one file per answer: intent, pseudo<n>, and each question's key
+  .stepwise/usage.jsonl     one JSON event per line: how the user moved through Stepwise
   notes.md                  every answer, rebuilt on each save
-  README.md                 written by the user in stage 4
+  README.md                 drafted from the answers in stage 4, then written by the user
 """
 
+import hashlib
+import json
 import os
 import re
+from datetime import datetime
 from pathlib import Path
 
 from .stages import INTENT_QUESTION, LAST_BUILT, QUESTIONS, TITLES
@@ -19,6 +23,10 @@ META = ".stepwise"
 
 def slugify(name: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-") or "app"
+
+
+def sha(text: str) -> str:
+    return hashlib.sha256(text.replace("\r\n", "\n").strip().encode()).hexdigest()[:16]
 
 
 def _write(path: Path, text: str) -> None:
@@ -59,19 +67,32 @@ class Project:
     def _write_state(self, state: dict[str, str]) -> None:
         _write(self.meta / "state", "".join(f"{k}={v}\n" for k, v in state.items()))
 
+    def get(self, key: str, default: str = "") -> str:
+        return self._read_state().get(key, default)
+
+    def set(self, key: str, value: str) -> None:
+        state = self._read_state()
+        state[key] = value
+        self._write_state(state)
+
     @property
     def name(self) -> str:
-        return self._read_state().get("name", self.root.name)
+        return self.get("name", self.root.name)
 
     @property
     def stage(self) -> int:
-        return int(self._read_state().get("stage", "1"))
+        return int(self.get("stage", "1"))
 
     @stage.setter
     def stage(self, value: int) -> None:
-        state = self._read_state()
-        state["stage"] = str(value)
-        self._write_state(state)
+        self.set("stage", str(value))
+
+    # --- usage log -----------------------------------------------------
+
+    def log(self, event: str, **data) -> None:
+        record = {"t": datetime.now().isoformat(timespec="seconds"), "event": event, **data}
+        with open(self.meta / "usage.jsonl", "a", encoding="utf-8", newline="\n") as f:
+            f.write(json.dumps(record, ensure_ascii=False) + "\n")
 
     # --- answers -------------------------------------------------------
 
@@ -118,17 +139,23 @@ class Project:
     def readme(self) -> Path:
         return self.root / "README.md"
 
-    def readme_skeleton(self) -> str:
-        return f"# {self.name}\n\n## What it is\n\n## Steps\n\n## Stack\n\n## Setup\n"
+    def write_draft(self, text: str) -> Path:
+        """Writes the generated draft to README.md, unless the user has edited it since the
+        last draft; then it goes to README.draft.md so their writing is never overwritten."""
+        target = self.readme
+        if self.readme.exists() and not self.readme_is_draft():
+            target = self.root / "README.draft.md"
+        _write(target, text)
+        if target == self.readme:
+            self.set("draft_sha", sha(text))
+        return target
 
-    def ensure_readme(self) -> None:
-        if not self.readme.exists():
-            _write(self.readme, self.readme_skeleton())
+    def readme_is_draft(self) -> bool:
+        """True while README.md is exactly what Stepwise generated."""
+        return self.readme.is_file() and sha(self.readme.read_text(encoding="utf-8")) == self.get("draft_sha")
 
     def readme_written(self) -> bool:
-        if not self.readme.is_file():
-            return False
-        return self.readme.read_text(encoding="utf-8").strip() != self.readme_skeleton().strip()
+        return self.readme.is_file() and not self.readme_is_draft()
 
     # --- progress ------------------------------------------------------
 
@@ -141,16 +168,22 @@ class Project:
             missing.append("at least one step")
         if stage == 3:
             missing += [f"pseudo-code for step {n}" for n, p in enumerate(self.pseudo(), 1) if not p]
-        missing += [f"question {n}" for n in range(1, len(QUESTIONS.get(stage, [])) + 1)
-                    if not self.answer(f"s{stage}q{n}")]
-        if stage == 4 and not self.readme_written():
-            missing.append("your README (it still matches the empty template)")
+        for q in QUESTIONS.get(stage, []):
+            short = q.prompt if len(q.prompt) <= 50 else q.prompt[:47].rsplit(" ", 1)[0] + "…"
+            if not self.answer(q.key):
+                missing.append(f"“{short}”")
+            elif q.follow and not self.answer(q.follow_key):
+                missing.append(f"the follow-up to “{short}”")
+        if stage == 4 and not self.readme.is_file():
+            missing.append("your README (press Build README draft)")
+        elif stage == 4 and self.readme_is_draft():
+            missing.append("your README (it's still the untouched draft)")
         return missing
 
     # --- notes.md ------------------------------------------------------
 
     def write_notes(self) -> None:
-        """notes.md collects every answer; it's the raw material for the final README."""
+        """notes.md collects every answer under the question that prompted it."""
         out = [f"# {self.name}: notes\n",
                "Your answers from Stepwise, by stage. Stepwise rewrites this file, "
                "so keep your own edits elsewhere.\n"]
@@ -165,9 +198,11 @@ class Project:
                 for n, step in enumerate(steps, 1):
                     if text := self.answer(f"pseudo{n}"):
                         parts.append(f"**Step {n}: {step}**\n\n```\n{text}\n```\n")
-            for n, question in enumerate(QUESTIONS.get(stage, []), 1):
-                if text := self.answer(f"s{stage}q{n}"):
-                    parts.append(f"**{question}**\n\n{text}\n")
+            for q in QUESTIONS.get(stage, []):
+                if text := self.answer(q.key):
+                    parts.append(f"**{q.prompt}**\n\n{text}\n")
+                if q.follow and (text := self.answer(q.follow_key)):
+                    parts.append(f"**{q.follow}**\n\n{text}\n")
             if parts:
                 out.append(f"## {stage}. {TITLES[stage - 1]}\n")
                 out += parts
