@@ -1,7 +1,9 @@
 import argparse
+import re
 import shutil
 import subprocess
 import time
+from dataclasses import dataclass
 from pathlib import Path
 
 from textual import on
@@ -10,29 +12,67 @@ from textual.binding import Binding
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import Screen
 from textual.widget import Widget
-from textual.widgets import Button, Footer, Input, Label, OptionList, Static, TextArea
+from textual.widgets import Button, Footer, Input, Label, Markdown, OptionList, Static, TextArea
 from textual.widgets.option_list import Option
 
 from .readme import draft
-from .stages import INTENT_QUESTION, INTROS, LAST_BUILT, PSEUDO_HINT, QUESTIONS, TITLES, Question
+from .stages import INTENT_QUESTION, INTROS, LAST_BUILT, PSEUDO_HINT, QUESTIONS, TITLES
 from .steps import StepEditor
 from .store import Project, slugify
 
 TOTAL = len(TITLES)
-
-
 SAVE_AFTER_IDLE = 5.0  # seconds without typing before an answer is written to disk
+PREVIEW_AFTER_IDLE = 0.3  # seconds; the preview is in memory, so it can follow typing closely
+
+
+@dataclass(frozen=True)
+class Page:
+    """One screen within a stage. Each holds a single thing to do, so no page is a wall of fields."""
+    kind: str  # "answer", "steps", "readme" or "done"
+    key: str = ""
+    prompt: str = ""
+    section: str = ""
+    placeholder: str = ""
+
+
+def pages(project: Project, stage: int) -> list[Page]:
+    if stage > LAST_BUILT:
+        return [Page("done")]
+    questions = [Page("answer", q.key, q.prompt, q.section) for q in QUESTIONS[stage]]
+    if stage == 1:
+        return [Page("answer", "intent", INTENT_QUESTION, "the opening line"), *questions]
+    if stage == 2:
+        return [Page("steps"), *questions]
+    if stage == 3:
+        steps = project.steps()
+        return [Page("answer", f"pseudo{n}", f"Step {n} of {len(steps)}: {step}", placeholder=PSEUDO_HINT)
+                for n, step in enumerate(steps, 1)] + questions
+    return [*questions, Page("readme")]
+
+
+def page_missing(project: Project, page: Page) -> str:
+    """What's left to do on this page, or an empty string."""
+    if page.kind == "answer" and not project.answer(page.key):
+        return "Answer this one before moving on."
+    if page.kind == "steps" and not project.steps():
+        return "Add at least one step before moving on."
+    if page.kind == "readme" and not project.readme.is_file():
+        return "Build your README draft before moving on."
+    if page.kind == "readme" and project.readme_is_draft():
+        return "Edit your README draft and save it before moving on."
+    return ""
+
+
+def anchor(heading: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "-", heading.lower()).strip("-")
 
 
 class AnswerArea(TextArea):
     """A multi-line answer, saved to the project under `key` once the user pauses typing."""
 
-    BINDINGS = [Binding("tab", "next_field", "Next field", show=False)]
-
     def __init__(self, key: str, text: str, placeholder: str = ""):
         super().__init__(text, soft_wrap=True, tab_behavior="focus", classes="answer", placeholder=placeholder)
         self.key = key
-        self.follow: "AnswerArea | None" = None
         self._focused_at = 0.0
         self._text_at_focus = text
         self._saved = text
@@ -43,6 +83,7 @@ class AnswerArea(TextArea):
             self._save_timer.stop()
         if self.text != self._saved:
             self._save_timer = self.set_timer(SAVE_AFTER_IDLE, self.save)
+        self.app.schedule_preview()
 
     def save(self) -> bool:
         """Writes the answer if it changed since the last save. Returns whether it wrote."""
@@ -67,53 +108,6 @@ class AnswerArea(TextArea):
         if changed or seconds >= 1:
             self.app.project.log("answer", key=self.key, seconds=seconds, changed=changed,
                                  chars=len(self.text.strip()), lines=len(self.text.strip().splitlines()))
-        if self.follow_waiting():
-            self.reveal_follow()
-
-    def follow_waiting(self) -> bool:
-        return bool(self.follow and self.text.strip() and not self.follow.parent.display)
-
-    def reveal_follow(self) -> None:
-        self.follow.parent.display = True
-        self.app.project.log("follow_up", key=self.key)
-
-    def action_next_field(self) -> None:
-        """Tab after a first answer opens its follow-up and moves there, like a reply in a conversation."""
-        if self.follow_waiting():
-            self.reveal_follow()
-            self.follow.focus()
-            self.call_after_refresh(self.follow.scroll_visible)
-        else:
-            self.screen.focus_next()
-
-
-class QuestionBlock(Vertical):
-    def __init__(self, project: Project, key: str, prompt: str, section: str = "",
-                 follow: str = "", follow_key: str = "", placeholder: str = ""):
-        super().__init__(classes="qa")
-        self.main = AnswerArea(key, project.answer(key), placeholder)
-        self.prompt, self.section, self.follow_prompt = prompt, section, follow
-        if follow:
-            self.main.follow = AnswerArea(follow_key, project.answer(follow_key))
-
-    @classmethod
-    def of(cls, project: Project, q: Question) -> "QuestionBlock":
-        return cls(project, q.key, q.prompt, q.section, q.follow, q.follow_key)
-
-    def compose(self) -> ComposeResult:
-        yield Label(self.prompt, classes="question")
-        if self.section:
-            yield Static(f"→ README · {self.section}", classes="tag")
-        yield self.main
-        if self.main.follow:
-            with Vertical(classes="follow") as box:
-                box.display = bool(self.main.text.strip())
-                yield Label(self.follow_prompt, classes="question")
-                yield self.main.follow
-
-
-def shown(w: Widget) -> bool:
-    return all(node.display for node in w.ancestors_with_self if isinstance(node, Widget))
 
 
 class NameScreen(Screen):
@@ -138,8 +132,9 @@ class StepwiseApp(App):
     CSS_PATH = "stepwise.tcss"
     TITLE = "Stepwise"
     BINDINGS = [
-        Binding("ctrl+n", "next_stage", "Next stage", priority=True),
-        Binding("ctrl+b", "prev_stage", "Back", priority=True),
+        Binding("ctrl+n", "next", "Next", priority=True),
+        Binding("ctrl+b", "back", "Back", priority=True),
+        Binding("ctrl+r", "toggle_preview", "README preview", priority=True),
         Binding("ctrl+q", "quit", "Quit", priority=True),
     ]
 
@@ -147,12 +142,17 @@ class StepwiseApp(App):
         super().__init__()
         self.project = project
         self.current = 1
+        self.page = 0
+        self._preview_timer = None
 
     def compose(self) -> ComposeResult:
         yield Static(id="topbar")
         with Horizontal():
             yield OptionList(id="sidebar")
             yield VerticalScroll(id="stage")
+            with VerticalScroll(id="preview"):
+                yield Static("README preview · Ctrl+R hides it", id="preview-title")
+                yield Markdown(id="preview-md")
         yield Footer()
 
     async def on_mount(self) -> None:
@@ -163,20 +163,77 @@ class StepwiseApp(App):
 
     async def start(self) -> None:
         self.project.log("open", stage=self.project.stage)
-        await self.show_stage(min(self.project.stage, LAST_BUILT + 1))
+        stage = min(self.project.stage, LAST_BUILT + 1)
+        await self.go(stage, self.first_open_page(stage))
 
     # --- navigation ----------------------------------------------------
 
-    async def show_stage(self, n: int) -> None:
+    @property
+    def pages(self) -> list[Page]:
+        return pages(self.project, self.current)
+
+    def first_open_page(self, stage: int) -> int:
+        stage_pages = pages(self.project, stage)
+        return next((i for i, p in enumerate(stage_pages) if page_missing(self.project, p)), 0)
+
+    async def go(self, stage: int, page: int) -> None:
         self.save_all()
-        self.current = n
-        self.project.log("view", stage=n)
+        self.current = stage
+        self.page = max(0, min(page, len(self.pages) - 1))
+        here = self.pages[self.page]
+        self.project.log("view", stage=stage, page=here.key or here.kind)
         self.refresh_chrome()
-        stage = self.query_one("#stage", VerticalScroll)
-        await stage.remove_children()
-        await stage.mount_all(self.stage_widgets(n))
-        stage.scroll_home(animate=False)
-        self.focus_first_empty()
+        container = self.query_one("#stage", VerticalScroll)
+        await container.remove_children()
+        await container.mount_all(self.page_widgets(here))
+        container.scroll_home(animate=False)
+        if field := next(iter(self.query("#stage AnswerArea, #stage StepEditor Input")), None):
+            field.focus()
+        self.schedule_preview()
+
+    async def action_next(self) -> None:
+        if self.current > LAST_BUILT:
+            return
+        self.save_all()
+        if problem := page_missing(self.project, self.pages[self.page]):
+            self.project.log("blocked", stage=self.current, page=self.pages[self.page].key or self.pages[self.page].kind)
+            self.notify(problem, severity="warning", timeout=5)
+            return
+        if self.page < len(self.pages) - 1:
+            await self.go(self.current, self.page + 1)
+            return
+        # Pages can be skipped through the sidebar, so the whole stage is checked before leaving it.
+        if missing := self.project.missing(self.current):
+            self.project.log("blocked", stage=self.current, missing=missing)
+            self.notify("Before moving on, fill in: " + ", ".join(missing) + ".",
+                        title="Not done yet", severity="warning", timeout=8)
+            await self.go(self.current, self.first_open_page(self.current))
+            return
+        nxt = self.current + 1
+        if nxt > self.project.stage:
+            self.project.stage = nxt
+            self.project.log("advance", stage=nxt)
+        await self.go(nxt, 0)
+
+    async def action_back(self) -> None:
+        if self.page > 0:
+            await self.go(self.current, self.page - 1)
+        elif self.current > 1:
+            await self.go(self.current - 1, len(pages(self.project, self.current - 1)) - 1)
+
+    @on(Button.Pressed, "#next")
+    async def next_pressed(self) -> None:
+        await self.action_next()
+
+    @on(Button.Pressed, "#back")
+    async def back_pressed(self) -> None:
+        await self.action_back()
+
+    @on(OptionList.OptionSelected, "#sidebar")
+    async def jump(self, event: OptionList.OptionSelected) -> None:
+        n = int(event.option.id)
+        if n != self.current:
+            await self.go(n, self.first_open_page(n))
 
     def refresh_chrome(self) -> None:
         reached = self.project.stage
@@ -186,9 +243,10 @@ class StepwiseApp(App):
             else "[dim]□[/]"
             for i in range(1, TOTAL + 1)
         )
-        self.query_one("#topbar", Static).update(
-            f"[b]Stepwise[/b] · {self.project.name}    {bar}  Stage {self.current} of {TOTAL}"
-        )
+        where = f"Stage {self.current} of {TOTAL}"
+        if len(self.pages) > 1:
+            where += f" · {self.page + 1} of {len(self.pages)}"
+        self.query_one("#topbar", Static).update(f"[b]Stepwise[/b] · {self.project.name}    {bar}  {where}")
         sidebar = self.query_one("#sidebar", OptionList)
         sidebar.clear_options()
         for i, title in enumerate(TITLES, 1):
@@ -196,37 +254,7 @@ class StepwiseApp(App):
             sidebar.add_option(Option(f"{mark} {i}. {title}", id=str(i), disabled=i > reached or i > LAST_BUILT))
         sidebar.highlighted = self.current - 1
 
-    def focus_first_empty(self) -> None:
-        fields = [w for w in self.query("#stage AnswerArea, #stage StepEditor Input") if shown(w)]
-        empty = next((w for w in fields if not getattr(w, "text", getattr(w, "value", ""))), None)
-        if target := empty or (fields[0] if fields else None):
-            target.focus()
-            self.call_after_refresh(target.scroll_visible)
-
-    async def action_next_stage(self) -> None:
-        if self.current > LAST_BUILT:
-            return
-        self.save_all()
-        if missing := self.project.missing(self.current):
-            self.project.log("blocked", stage=self.current, missing=missing)
-            self.notify("Before moving on, fill in: " + ", ".join(missing) + ".",
-                        title="Not done yet", severity="warning", timeout=8)
-            return
-        nxt = self.current + 1
-        if nxt > self.project.stage:
-            self.project.stage = nxt
-            self.project.log("advance", stage=nxt)
-        await self.show_stage(nxt)
-
-    async def action_prev_stage(self) -> None:
-        if self.current > 1:
-            await self.show_stage(self.current - 1)
-
-    @on(OptionList.OptionSelected, "#sidebar")
-    async def jump(self, event: OptionList.OptionSelected) -> None:
-        n = int(event.option.id)
-        if n != self.current:
-            await self.show_stage(n)
+    # --- saving --------------------------------------------------------
 
     def save_all(self) -> None:
         """Writes any answer still waiting on its idle timer, then rebuilds notes.md once."""
@@ -238,49 +266,75 @@ class StepwiseApp(App):
         self.save_all()
         self.exit()
 
-    # --- stages --------------------------------------------------------
+    # --- preview -------------------------------------------------------
 
-    def stage_widgets(self, n: int) -> list[Widget]:
-        p = self.project
-        if n > LAST_BUILT:
-            return [
-                Label(f"{n}. {TITLES[n - 1]}", classes="stage-title"),
+    def action_toggle_preview(self) -> None:
+        preview = self.query_one("#preview")
+        preview.display = not preview.display
+        self.project.log("preview", shown=preview.display)
+        self.schedule_preview()
+
+    def schedule_preview(self) -> None:
+        if self._preview_timer:
+            self._preview_timer.stop()
+        self._preview_timer = self.set_timer(PREVIEW_AFTER_IDLE, self.refresh_preview)
+
+    async def refresh_preview(self) -> None:
+        preview = self.query_one("#preview", VerticalScroll)
+        if not preview.display:
+            return
+        here = self.pages[self.page]
+        live = {area.key: area.text for area in self.query(AnswerArea)}
+        markdown = self.query_one("#preview-md", Markdown)
+        await markdown.update(draft(self.project, live, here.key if here.kind == "answer" else None))
+        # Keep the part of the README this page writes in view.
+        section = {"steps": "Build plan"}.get(here.kind, here.section)
+        if section and section != "the opening line":
+            markdown.goto_anchor(anchor(section))
+        else:
+            preview.scroll_home(animate=False)
+
+    # --- pages ---------------------------------------------------------
+
+    def page_widgets(self, page: Page) -> list[Widget]:
+        p, n = self.project, self.current
+        widgets: list[Widget] = [Label(f"{n}. {TITLES[n - 1]}", classes="stage-title")]
+        if page.kind == "done":
+            return widgets + [
                 Static(f"Stages 1 to {LAST_BUILT} are done. You have a plan, pseudo-code, a stack "
                        "and a README draft, all in your own words.", classes="intro"),
                 Static(f"Stage {n} isn't in Stepwise yet. Your files are in:\n\n  {p.root}", classes="intro"),
             ]
-
-        widgets: list[Widget] = [
-            Label(f"{n}. {TITLES[n - 1]}", classes="stage-title"),
-            Static(INTROS[n], classes="intro"),
-        ]
-        if n == 1:
-            widgets.append(Static("Answers save as you type. Tab moves to the next field. "
-                                  "Each answer goes into your app's README, so write it for a reader.",
-                                  classes="hint"))
-            widgets.append(QuestionBlock(p, "intent", INTENT_QUESTION, "the opening line"))
-        if n == 2:
+        if self.page == 0:
+            widgets.append(Static(INTROS[n], classes="intro"))
+        if n == 1 and self.page == 0:
+            widgets.append(Static("Answers save when you pause typing. Each one becomes part of your app's "
+                                  "README; the preview on the right shows where.", classes="hint"))
+        if page.kind == "answer":
+            widgets.append(Label(page.prompt, classes="question"))
+            if page.section:
+                widgets.append(Static(f"→ README · {page.section}", classes="tag"))
+            widgets.append(AnswerArea(page.key, p.answer(page.key), page.placeholder))
+        elif page.kind == "steps":
             widgets.append(Static(p.answer("intent"), classes="quote"))
             widgets.append(StepEditor(p))
-        if n == 3:
-            for i, step in enumerate(p.steps(), 1):
-                widgets.append(QuestionBlock(p, f"pseudo{i}", f"Step {i}: {step}", placeholder=PSEUDO_HINT))
-            widgets.append(Label("Now look back over your pseudo-code.", classes="section"))
-        widgets += [QuestionBlock.of(p, q) for q in QUESTIONS[n]]
-        if n == 4:
+        elif page.kind == "readme":
             widgets.append(ReadmePanel(p))
+        back = Button("‹ Back", id="back", disabled=n == 1 and self.page == 0)
+        back.can_focus = False  # so Tab from an answer lands on Next, and Tab, Enter moves forward
+        widgets.append(Horizontal(back, Button("Next ›", id="next", variant="primary"), id="nav"))
         return widgets
 
 
 class ReadmePanel(Vertical):
-    """Stage 4's last task: build the README draft from the answers, then make it yours."""
+    """Stage 4's last page: build the README draft from the answers, then make it yours."""
 
     def __init__(self, project: Project):
         super().__init__(id="readme-panel")
         self.project = project
 
     def compose(self) -> ComposeResult:
-        yield Label("Now turn your answers into README Part One.", classes="section")
+        yield Label("Now turn your answers into README Part One.", classes="question")
         yield Static("Build a draft from everything you've answered so far, then open it and make it read "
                      "well: fix the flow, cut what's repeated, add what's missing. Stepwise won't move on "
                      "until you've edited it.", classes="intro")

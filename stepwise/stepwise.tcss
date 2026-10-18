@@ -59,19 +59,32 @@ Label {
     margin-top: 2;
 }
 
-.qa {
-    height: auto;
-}
-
 .tag {
     color: $text-muted;
     text-style: italic;
 }
 
-.follow {
+#nav {
     height: auto;
-    padding-left: 2;
-    border-left: tall $accent 40%;
+    margin-top: 1;
+}
+
+#nav Button {
+    margin-right: 1;
+}
+
+#preview {
+    width: 45%;
+    height: 1fr;
+    border-left: solid $panel-lighten-2;
+    padding: 0 1;
+    background: $surface;
+}
+
+#preview-title {
+    color: $text-muted;
+    text-style: italic;
+    padding: 1 0 0 1;
 }
 
 #readme-buttons {
@@ -80,8 +93,9 @@ Label {
 
 .answer {
     height: auto;
-    min-height: 3;
-    max-height: 14;
+    min-height: 6;
+    max-height: 20;
+    margin-top: 1;
 }
 
 #step-list {

@@ -1,0 +1,3 @@
+I'm least sure about the UI, I still don't know how I'll do that, it could be that I have to copy/paste a lot of documentation examples
+
+I could try to look at the doc first and break it down into pseudocode

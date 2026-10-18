@@ -179,11 +179,9 @@ class Project:
         if stage == 3:
             missing += [f"pseudo-code for step {n}" for n, p in enumerate(self.pseudo(), 1) if not p]
         for q in QUESTIONS.get(stage, []):
-            short = q.prompt if len(q.prompt) <= 50 else q.prompt[:47].rsplit(" ", 1)[0] + "…"
             if not self.answer(q.key):
+                short = q.prompt if len(q.prompt) <= 50 else q.prompt[:47].rsplit(" ", 1)[0] + "…"
                 missing.append(f"“{short}”")
-            elif q.follow and not self.answer(q.follow_key):
-                missing.append(f"the follow-up to “{short}”")
         if stage == 4 and not self.readme.is_file():
             missing.append("your README (press Build README draft)")
         elif stage == 4 and self.readme_is_draft():
@@ -211,8 +209,6 @@ class Project:
             for q in QUESTIONS.get(stage, []):
                 if text := self.answer(q.key):
                     parts.append(f"**{q.prompt}**\n\n{text}\n")
-                if q.follow and (text := self.answer(q.follow_key)):
-                    parts.append(f"**{q.follow}**\n\n{text}\n")
             if parts:
                 out.append(f"## {stage}. {TITLES[stage - 1]}\n")
                 out += parts

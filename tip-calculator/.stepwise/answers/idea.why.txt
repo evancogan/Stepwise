@@ -1,1 +1,3 @@
 Have you ever been sitting at a restaurant, nervously punching numbers into your phone's calculator? No more! I say, as the solution is this app. Simply open the app, and select a tip amount.
+
+Building it myself would give me proof of ownership, that I made my own tip calculator.
