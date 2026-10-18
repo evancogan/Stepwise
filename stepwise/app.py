@@ -15,7 +15,7 @@ from textual.widget import Widget
 from textual.widgets import Button, Footer, Input, Label, Markdown, OptionList, Static, TextArea
 from textual.widgets.option_list import Option
 
-from .readme import draft
+from .readme import STEPS, draft
 from .stages import INTENT_QUESTION, INTROS, LAST_BUILT, PSEUDO_HINT, QUESTIONS, TITLES
 from .steps import StepEditor
 from .store import Project, slugify
@@ -286,7 +286,8 @@ class StepwiseApp(App):
         here = self.pages[self.page]
         live = {area.key: area.text for area in self.query(AnswerArea)}
         markdown = self.query_one("#preview-md", Markdown)
-        await markdown.update(draft(self.project, live, here.key if here.kind == "answer" else None))
+        focus = {"answer": here.key, "steps": STEPS}.get(here.kind)
+        await markdown.update(draft(self.project, live, focus))
         # Keep the part of the README this page writes in view.
         section = {"steps": "Build plan"}.get(here.kind, here.section)
         if section and section != "the opening line":

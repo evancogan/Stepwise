@@ -1,0 +1,1 @@
+I would add a gratuity tracker that tells the user their tip history, and average tip.

@@ -1,12 +1,24 @@
 """Stage 2's numbered step list: arrow keys to move, Enter to edit, Shift+arrows to reorder."""
 
-from textual import on
+from textual import events, on
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Vertical
 from textual.widgets import Input, Label, ListItem, ListView, Static
 
 from .store import Project
+
+
+class StepItem(ListItem):
+    def _on_click(self, event: events.Click) -> None:
+        # ListView treats any click as "select", which opened the edit box on a single click.
+        # Here a click only highlights the step; a double-click edits it, like Enter.
+        event.prevent_default()
+        steps: ListView = self.parent
+        steps.focus()
+        steps.index = steps.children.index(self)
+        if event.chain >= 2:
+            steps.action_select_cursor()
 
 
 class StepList(ListView):
@@ -60,14 +72,15 @@ class StepEditor(Vertical):
         self.step_list = StepList(id="step-list")
         yield self.step_list
         yield StepInput(placeholder="Type a step and press Enter to add it", id="step-input")
-        yield Static("↑↓ choose a step · Enter edit · Shift+↑↓ reorder · Delete remove", classes="hint")
+        yield Static("↑↓ choose a step · Enter or double-click edit · Shift+↑↓ reorder · Delete remove",
+                     classes="hint")
 
     async def on_mount(self) -> None:
         await self.redraw(0 if self.steps else None)
 
     async def redraw(self, index: int | None) -> None:
         await self.step_list.clear()
-        await self.step_list.extend(ListItem(Label(f"{n}. {s}")) for n, s in enumerate(self.steps, 1))
+        await self.step_list.extend(StepItem(Label(f"{n}. {s}")) for n, s in enumerate(self.steps, 1))
         self.step_list.display = bool(self.steps)
         if index is not None and self.steps:
             self.step_list.index = max(0, min(index, len(self.steps) - 1))

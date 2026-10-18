@@ -1,1 +1,1 @@
-output slider min 0 max 100
+tip = total * tip percentage

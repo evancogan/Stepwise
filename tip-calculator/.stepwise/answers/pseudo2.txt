@@ -1,1 +1,1 @@
-input = get user input("Enter total")
+input = type(text)

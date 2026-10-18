@@ -1,1 +1,1 @@
-not applicable to code
+input = get user input("Enter total")
