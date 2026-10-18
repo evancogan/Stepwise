@@ -1,0 +1,107 @@
+Screen {
+    layout: vertical;
+}
+
+/* Labels default to content width, which cuts off long questions instead of wrapping. */
+Label {
+    width: 1fr;
+}
+
+#topbar {
+    height: 1;
+    padding: 0 1;
+    background: $panel;
+}
+
+#sidebar {
+    width: 34;
+    height: 1fr;
+    border: none;
+    border-right: solid $panel-lighten-2;
+    padding: 1 0;
+}
+
+#stage {
+    height: 1fr;
+    padding: 1 3;
+}
+
+.stage-title {
+    text-style: bold;
+    color: $accent;
+    margin-bottom: 1;
+}
+
+.intro {
+    margin-bottom: 1;
+}
+
+.hint {
+    color: $text-muted;
+    margin-bottom: 1;
+}
+
+.quote {
+    color: $text-muted;
+    border-left: thick $accent;
+    padding: 0 1;
+    margin-bottom: 1;
+}
+
+.question {
+    text-style: bold;
+    margin-top: 1;
+}
+
+.section {
+    text-style: bold;
+    color: $accent;
+    margin-top: 2;
+}
+
+.answer {
+    height: auto;
+    min-height: 3;
+    max-height: 14;
+}
+
+#step-list {
+    height: auto;
+    max-height: 20;
+    border: round $panel-lighten-2;
+    padding: 0 1;
+}
+
+#step-list:focus {
+    border: round $accent;
+}
+
+#step-input {
+    margin-top: 1;
+}
+
+#readme-panel {
+    height: auto;
+}
+
+#readme-panel Button {
+    margin: 1 0;
+}
+
+#welcome {
+    width: 70;
+    height: auto;
+    margin: 4 0 0 0;
+    padding: 1 3;
+    border: round $accent;
+}
+
+NameScreen {
+    align: center top;
+}
+
+#welcome-title {
+    text-style: bold;
+    color: $accent;
+    margin-bottom: 1;
+}

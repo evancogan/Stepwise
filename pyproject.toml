@@ -1,0 +1,19 @@
+[project]
+name = "stepwise"
+version = "0.1.0"
+description = "Build your own app, one stage at a time."
+requires-python = ">=3.10"
+dependencies = ["textual>=8.2"]
+
+[project.scripts]
+stepwise = "stepwise.app:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["stepwise"]
+
+[tool.setuptools.package-data]
+stepwise = ["*.tcss"]
