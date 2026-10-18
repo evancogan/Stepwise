@@ -21,8 +21,11 @@ from .store import Project, slugify
 TOTAL = len(TITLES)
 
 
+SAVE_AFTER_IDLE = 5.0  # seconds without typing before an answer is written to disk
+
+
 class AnswerArea(TextArea):
-    """A multi-line answer, saved to the project under `key` as it's typed."""
+    """A multi-line answer, saved to the project under `key` once the user pauses typing."""
 
     BINDINGS = [Binding("tab", "next_field", "Next field", show=False)]
 
@@ -32,12 +35,33 @@ class AnswerArea(TextArea):
         self.follow: "AnswerArea | None" = None
         self._focused_at = 0.0
         self._text_at_focus = text
+        self._saved = text
+        self._save_timer = None
+
+    def on_text_area_changed(self, event: TextArea.Changed) -> None:
+        if self._save_timer:
+            self._save_timer.stop()
+        if self.text != self._saved:
+            self._save_timer = self.set_timer(SAVE_AFTER_IDLE, self.save)
+
+    def save(self) -> bool:
+        """Writes the answer if it changed since the last save. Returns whether it wrote."""
+        if self._save_timer:
+            self._save_timer.stop()
+            self._save_timer = None
+        if self.text == self._saved:
+            return False
+        self.app.project.set_answer(self.key, self.text)
+        self._saved = self.text
+        return True
 
     def on_focus(self) -> None:
         self._focused_at = time.monotonic()
         self._text_at_focus = self.text
 
     def on_blur(self) -> None:
+        if self.save():
+            self.app.project.write_notes()
         seconds = round(time.monotonic() - self._focused_at, 1)
         changed = self.text != self._text_at_focus
         if changed or seconds >= 1:
@@ -144,6 +168,7 @@ class StepwiseApp(App):
     # --- navigation ----------------------------------------------------
 
     async def show_stage(self, n: int) -> None:
+        self.save_all()
         self.current = n
         self.project.log("view", stage=n)
         self.refresh_chrome()
@@ -181,6 +206,7 @@ class StepwiseApp(App):
     async def action_next_stage(self) -> None:
         if self.current > LAST_BUILT:
             return
+        self.save_all()
         if missing := self.project.missing(self.current):
             self.project.log("blocked", stage=self.current, missing=missing)
             self.notify("Before moving on, fill in: " + ", ".join(missing) + ".",
@@ -202,10 +228,15 @@ class StepwiseApp(App):
         if n != self.current:
             await self.show_stage(n)
 
-    @on(TextArea.Changed)
-    def save_answer(self, event: TextArea.Changed) -> None:
-        if isinstance(event.text_area, AnswerArea):
-            self.project.set_answer(event.text_area.key, event.text_area.text)
+    def save_all(self) -> None:
+        """Writes any answer still waiting on its idle timer, then rebuilds notes.md once."""
+        saved = [area.save() for area in self.query(AnswerArea)]
+        if any(saved):
+            self.project.write_notes()
+
+    async def action_quit(self) -> None:
+        self.save_all()
+        self.exit()
 
     # --- stages --------------------------------------------------------
 
@@ -277,6 +308,7 @@ class ReadmePanel(Vertical):
 
     @on(Button.Pressed, "#build-draft")
     def build(self) -> None:
+        self.app.save_all()
         target = self.project.write_draft(draft(self.project))
         self.project.log("readme", action="draft", file=target.name)
         if target != self.project.readme:

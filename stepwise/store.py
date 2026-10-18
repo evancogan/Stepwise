@@ -13,6 +13,7 @@ import hashlib
 import json
 import os
 import re
+import time
 from datetime import datetime
 from pathlib import Path
 
@@ -32,7 +33,16 @@ def sha(text: str) -> str:
 def _write(path: Path, text: str) -> None:
     tmp = path.with_name(path.name + ".tmp")
     tmp.write_text(text, encoding="utf-8", newline="\n")
-    os.replace(tmp, path)
+    # On Windows the rename fails while another program (an editor, a sync client, antivirus)
+    # has the target open. Retry briefly, then write in place so the answer isn't lost.
+    for attempt in range(5):
+        try:
+            os.replace(tmp, path)
+            return
+        except PermissionError:
+            time.sleep(0.05 * (attempt + 1))
+    path.write_text(text, encoding="utf-8", newline="\n")
+    tmp.unlink(missing_ok=True)
 
 
 class Project:
@@ -101,12 +111,12 @@ class Project:
         return path.read_text(encoding="utf-8").rstrip("\n") if path.is_file() else ""
 
     def set_answer(self, key: str, text: str) -> None:
+        """Writes one answer. Callers rebuild notes.md themselves, once per batch of saves."""
         path = self.answers / f"{key}.txt"
         if text.strip():
             _write(path, text.rstrip() + "\n")
         else:
             path.unlink(missing_ok=True)
-        self.write_notes()
 
     # --- steps ---------------------------------------------------------
 

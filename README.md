@@ -67,3 +67,7 @@ Questions:
 - Which decision in step 4 turned out to be wrong, and what would you change?
 - If a stranger read this README, what would they still have to guess?
 - What would you do differently if you started this app over tomorrow?
+
+# What We Learned
+
+- **Saving on every keystroke is a bad idea.** The first version wrote each answer to disk, and rebuilt the notes file, every time a key was pressed. Besides being wasteful, it crashed on Windows: when another program (an editor or sync client) briefly held the notes file open, the save failed and took the app down with it. Answers now save after 5 seconds without typing, or when you leave a field, change stage or quit, and a save that hits a locked file retries instead of crashing.

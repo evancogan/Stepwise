@@ -1,0 +1,23 @@
+{"t": "2026-10-18T15:23:12", "event": "open", "stage": 1}
+{"t": "2026-10-18T15:23:12", "event": "view", "stage": 1}
+{"t": "2026-10-18T15:29:45", "event": "answer", "key": "intent", "seconds": 392.7, "changed": false, "chars": 0, "lines": 0}
+{"t": "2026-10-18T15:40:09", "event": "answer", "key": "intent", "seconds": 47.3, "changed": true, "chars": 64, "lines": 1}
+{"t": "2026-10-18T15:41:59", "event": "answer", "key": "idea.use", "seconds": 109.9, "changed": true, "chars": 280, "lines": 1}
+{"t": "2026-10-18T15:42:13", "event": "answer", "key": "idea.why", "seconds": 13.6, "changed": true, "chars": 7, "lines": 1}
+{"t": "2026-10-18T15:42:13", "event": "follow_up", "key": "idea.why"}
+{"t": "2026-10-18T15:42:16", "event": "answer", "key": "idea.use", "seconds": 2.7, "changed": true, "chars": 88, "lines": 1}
+{"t": "2026-10-18T15:42:21", "event": "answer", "key": "idea.why", "seconds": 5.8, "changed": true, "chars": 191, "lines": 1}
+{"t": "2026-10-18T15:43:25", "event": "answer", "key": "idea.use", "seconds": 63.4, "changed": true, "chars": 149, "lines": 1}
+{"t": "2026-10-18T15:43:54", "event": "advance", "stage": 2}
+{"t": "2026-10-18T15:43:54", "event": "view", "stage": 2}
+{"t": "2026-10-18T15:43:54", "event": "answer", "key": "idea.why.follow", "seconds": 29.3, "changed": true, "chars": 87, "lines": 1}
+{"t": "2026-10-18T15:44:13", "event": "step", "action": "add", "index": 1, "text": "The app opens"}
+{"t": "2026-10-18T15:45:02", "event": "step", "action": "add", "index": 2, "text": "A screen displays a text field: \"Enter total\""}
+{"t": "2026-10-18T15:45:14", "event": "step", "action": "add", "index": 3, "text": "A textbox is displayed underneath it"}
+{"t": "2026-10-18T15:46:01", "event": "step", "action": "add", "index": 4, "text": "Another text field pops up: \"Tip Percentage\""}
+{"t": "2026-10-18T15:46:17", "event": "step", "action": "add", "index": 5, "text": "A slider with a number that rolls with it is shown below it"}
+{"t": "2026-10-18T15:46:35", "event": "step", "action": "add", "index": 6, "text": "The user enters both fields"}
+{"t": "2026-10-18T15:47:24", "event": "step", "action": "add", "index": 7, "text": "The app calculates: total * tip percentage"}
+{"t": "2026-10-18T15:47:33", "event": "step", "action": "add", "index": 8, "text": "The app displays tip to give"}
+{"t": "2026-10-18T15:51:05", "event": "answer", "key": "steps.walk", "seconds": 209.0, "changed": true, "chars": 205, "lines": 1}
+{"t": "2026-10-18T15:51:05", "event": "quit", "stage": 2, "minutes": 28.6}
