@@ -1,0 +1,1 @@
+1, since the game window must be created for a game to be rendered

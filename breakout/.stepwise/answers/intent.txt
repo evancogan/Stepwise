@@ -1,0 +1,1 @@
+This is a ball and paddle game, where a ball is shot towards the paddle in some slightly random direction, and the paddle is aimed so that the ball can bounce off of it and hit bricks for a score.

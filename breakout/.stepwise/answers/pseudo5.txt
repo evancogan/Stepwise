@@ -1,0 +1,1 @@
+a button appears, text inside says "start"

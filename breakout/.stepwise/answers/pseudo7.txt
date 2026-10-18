@@ -1,0 +1,2 @@
+paddle hits ball
+ball bounces in the reverse direction

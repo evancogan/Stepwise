@@ -1,0 +1,3 @@
+START
+game window created
+renderer initialized

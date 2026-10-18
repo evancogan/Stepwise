@@ -1,0 +1,1 @@
+colored lines in an array on the top of the screen
