@@ -6,6 +6,7 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
+from rich.text import Text
 from textual import on
 from textual.app import App, ComposeResult
 from textual.binding import Binding
@@ -33,21 +34,23 @@ class Page:
     prompt: str = ""
     section: str = ""
     placeholder: str = ""
+    label: str = ""  # short name for the sidebar checklist
 
 
 def pages(project: Project, stage: int) -> list[Page]:
     if stage > LAST_BUILT:
         return [Page("done")]
-    questions = [Page("answer", q.key, q.prompt, q.section) for q in QUESTIONS[stage]]
+    questions = [Page("answer", q.key, q.prompt, q.section, label=q.heading or q.section) for q in QUESTIONS[stage]]
     if stage == 1:
-        return [Page("answer", "intent", INTENT_QUESTION, "the opening line"), *questions]
+        return [Page("answer", "intent", INTENT_QUESTION, "the opening line", label="Description"), *questions]
     if stage == 2:
-        return [Page("steps"), *questions]
+        return [Page("steps", label="Your steps"), *questions]
     if stage == 3:
         steps = project.steps()
-        return [Page("answer", f"pseudo{n}", f"Step {n} of {len(steps)}: {step}", placeholder=PSEUDO_HINT)
+        return [Page("answer", f"pseudo{n}", f"Step {n} of {len(steps)}: {step}", placeholder=PSEUDO_HINT,
+                     label=f"Step {n}: {step}")
                 for n, step in enumerate(steps, 1)] + questions
-    return [*questions, Page("readme")]
+    return [*questions, Page("readme", label="README draft")]
 
 
 def page_missing(project: Project, page: Page) -> str:
@@ -94,6 +97,7 @@ class AnswerArea(TextArea):
             return False
         self.app.project.set_answer(self.key, self.text)
         self._saved = self.text
+        self.app.refresh_sidebar()
         return True
 
     def on_focus(self) -> None:
@@ -231,8 +235,12 @@ class StepwiseApp(App):
 
     @on(OptionList.OptionSelected, "#sidebar")
     async def jump(self, event: OptionList.OptionSelected) -> None:
-        n = int(event.option.id)
-        if n != self.current:
+        kind, _, target = event.option.id.partition(":")
+        if kind == "page":
+            stage, page = map(int, target.split(","))
+            if (stage, page) != (self.current, self.page):
+                await self.go(stage, page)
+        elif (n := int(target)) != self.current:
             await self.go(n, self.first_open_page(n))
 
     def refresh_chrome(self) -> None:
@@ -247,12 +255,27 @@ class StepwiseApp(App):
         if len(self.pages) > 1:
             where += f" · {self.page + 1} of {len(self.pages)}"
         self.query_one("#topbar", Static).update(f"[b]Stepwise[/b] · {self.project.name}    {bar}  {where}")
+        self.refresh_sidebar()
+
+    def refresh_sidebar(self) -> None:
+        """Lists the stages, with the current stage's pages as a checklist underneath it."""
+        reached = self.project.stage
         sidebar = self.query_one("#sidebar", OptionList)
         sidebar.clear_options()
+        highlight = 0
         for i, title in enumerate(TITLES, 1):
             mark = "✓" if i < reached else "›" if i == self.current else " "
-            sidebar.add_option(Option(f"{mark} {i}. {title}", id=str(i), disabled=i > reached or i > LAST_BUILT))
-        sidebar.highlighted = self.current - 1
+            sidebar.add_option(Option(f"{mark} {i}. {title}", id=f"stage:{i}", disabled=i > reached or i > LAST_BUILT))
+            if i != self.current or i > LAST_BUILT:
+                continue
+            for n, page in enumerate(self.pages):
+                tick = "□" if page_missing(self.project, page) else "✓"
+                label = page.label if len(page.label) <= 24 else page.label[:23].rstrip() + "…"
+                style = "bold" if n == self.page else "dim" if tick == "✓" else ""
+                if n == self.page:
+                    highlight = sidebar.option_count
+                sidebar.add_option(Option(Text(f"    {tick} {label}", style=style), id=f"page:{i},{n}"))
+        sidebar.highlighted = highlight or self.current - 1
 
     # --- saving --------------------------------------------------------
 

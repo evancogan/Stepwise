@@ -88,6 +88,7 @@ class StepEditor(Vertical):
     def save(self) -> None:
         self.project.set_steps(self.steps, self.pseudo)
         self.app.schedule_preview()
+        self.app.refresh_sidebar()
 
     @property
     def input(self) -> StepInput:
