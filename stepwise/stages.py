@@ -85,9 +85,10 @@ FILES_QUESTION = (
     "One per line: the file name, a colon, and what it's for, like tip.py: works out the tip"
 )
 PREREQS_QUESTION = (
-    "What does someone need installed before your app will run? One per line: first the language and its "
-    "version, then each library by the name you import it with, and what it's for. Like: Python 3.14, "
-    "then PySide6: draws the window"
+    "What does someone need to install before your app will run? One per line. Start with the language and "
+    "its version, like Python 3.14. Then each library you had to install, and what it's for, like "
+    "PySide6: draws the window. Only list what you installed yourself: things that come with the language "
+    "(like sys) and parts of a library (like QtCore, which comes inside PySide6) don't need their own line."
 )
 TESTS_QUESTION = "What should you test? One thing per line, in plain words, like: the tip is 0 when the total is 0"
 

@@ -91,6 +91,14 @@ There is not enough data for a logical operation to output a new number
 
 - tip-calculator.py
 
+**Prerequisites**
+
+- sys
+- PySide6
+- QtCore
+- QtWidgets
+- QtGui
+
 **Where will people use your app: in a browser, on a phone, on a desktop, or in a terminal?**
 
 PyQt6 (Python)
