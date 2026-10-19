@@ -81,6 +81,14 @@ Label {
     background: $surface;
 }
 
+/* The preview marks the answer being edited as Markdown strong. Bold is barely visible in
+   many terminal fonts, so it's shown as a colour and tint instead, like a highlighter. */
+#preview-md MarkdownBlock > .strong {
+    text-style: none;
+    color: $accent;
+    background: $accent 15%;
+}
+
 #preview-title {
     color: $text-muted;
     text-style: italic;

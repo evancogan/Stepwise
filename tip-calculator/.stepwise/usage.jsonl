@@ -136,3 +136,21 @@
 {"t": "2026-10-18T18:49:10", "event": "answer", "key": "steps.critical", "seconds": 7.8, "changed": false, "chars": 310, "lines": 3}
 {"t": "2026-10-18T18:49:10", "event": "view", "stage": 2, "page": "steps.later"}
 {"t": "2026-10-18T18:49:17", "event": "answer", "key": "steps.later", "seconds": 6.8, "changed": false, "chars": 86, "lines": 1}
+{"t": "2026-10-18T20:18:16", "event": "open", "stage": 4}
+{"t": "2026-10-18T20:18:16", "event": "view", "stage": 4, "page": "readme"}
+{"t": "2026-10-18T20:21:12", "event": "view", "stage": 3, "page": "pseudo1"}
+{"t": "2026-10-18T20:21:13", "event": "answer", "key": "pseudo1", "seconds": 1.3, "changed": false, "chars": 37, "lines": 1}
+{"t": "2026-10-18T20:21:13", "event": "view", "stage": 2, "page": "steps"}
+{"t": "2026-10-18T20:21:14", "event": "view", "stage": 1, "page": "intent"}
+{"t": "2026-10-18T20:21:15", "event": "answer", "key": "intent", "seconds": 1.3, "changed": false, "chars": 64, "lines": 1}
+{"t": "2026-10-18T20:21:15", "event": "view", "stage": 1, "page": "idea.use"}
+{"t": "2026-10-18T20:21:20", "event": "answer", "key": "idea.use", "seconds": 4.8, "changed": false, "chars": 149, "lines": 1}
+{"t": "2026-10-18T20:21:21", "event": "view", "stage": 1, "page": "idea.why"}
+{"t": "2026-10-18T20:21:26", "event": "answer", "key": "idea.why", "seconds": 4.4, "changed": false, "chars": 280, "lines": 3}
+{"t": "2026-10-18T20:21:29", "event": "view", "stage": 1, "page": "idea.use"}
+{"t": "2026-10-18T20:21:29", "event": "view", "stage": 1, "page": "idea.why"}
+{"t": "2026-10-18T20:21:32", "event": "answer", "key": "idea.why", "seconds": 2.7, "changed": false, "chars": 280, "lines": 3}
+{"t": "2026-10-18T20:21:32", "event": "view", "stage": 1, "page": "idea.use"}
+{"t": "2026-10-18T20:21:34", "event": "answer", "key": "idea.use", "seconds": 2.3, "changed": false, "chars": 149, "lines": 1}
+{"t": "2026-10-18T20:21:35", "event": "view", "stage": 1, "page": "idea.why"}
+{"t": "2026-10-18T20:21:44", "event": "answer", "key": "idea.why", "seconds": 9.5, "changed": false, "chars": 280, "lines": 3}

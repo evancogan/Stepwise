@@ -11,8 +11,9 @@ PLACEHOLDER = "Your answer will appear here."
 STEPS = "steps"  # `here` value for the step list page
 
 
-def bold(text: str) -> str:
-    """Bolds every line, keeping list markers outside the bold so lists still render."""
+def highlight(text: str) -> str:
+    """Marks every line as Markdown strong, which the preview styles as a highlight.
+    List markers stay outside the markup so lists still render."""
     lines = []
     for line in text.splitlines():
         marker, content = re.match(r"(\s*(?:[-*+]|\d+\.)?\s*(?:\[[ x]\]\s*)?)(.*)", line).groups()
@@ -22,15 +23,15 @@ def bold(text: str) -> str:
 
 def draft(project: Project, live: Mapping[str, str] | None = None, here: str | None = None) -> str:
     """`live` holds answers still being typed (not yet saved). `here` is what's on screen:
-    a question key, or STEPS. Its text is bolded in the draft, or replaced by a bold
-    placeholder while empty, so the user sees where their writing lands."""
+    a question key, or STEPS. Its text is highlighted in the draft, or replaced by a
+    highlighted placeholder while empty, so the user sees where their writing lands."""
     live = live or {}
 
     def text(key: str) -> str:
         value = (live[key] if key in live else project.answer(key)).strip()
         if key != here:
             return value
-        return bold(value) if value else f"***{PLACEHOLDER}***"
+        return highlight(value) if value else f"***{PLACEHOLDER}***"
 
     out = [f"# {project.name}"]
     if intent := text("intent"):
@@ -41,7 +42,7 @@ def draft(project: Project, live: Mapping[str, str] | None = None, here: str | N
         body = []
         if section == "Build plan" and (steps := project.steps()):
             plan = "\n".join(f"- [ ] {step}" for step in steps)
-            body.append(bold(plan) if here == STEPS else plan)
+            body.append(highlight(plan) if here == STEPS else plan)
         for q in (q for q in questions if q.section == section):
             if answer := text(q.key):
                 body += [f"### {q.heading}", answer] if q.heading else [answer]
