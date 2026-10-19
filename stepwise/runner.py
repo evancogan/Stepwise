@@ -24,6 +24,23 @@ STARTED_OK_AFTER = 2.0  # seconds; a window or server app stopped after this, wi
 ERROR_MARKERS = ("Traceback (most recent call last)", "Error:", "error:")
 
 
+def run_env() -> dict[str, str]:
+    # Unbuffered so a Python app's prints show up as they happen, not when it exits.
+    return {**os.environ, "PYTHONUNBUFFERED": "1", "PYTHONIOENCODING": "utf-8"}
+
+
+async def run_capture(command: str, cwd, timeout: float = 30) -> tuple[int, str]:
+    """Runs a short command the way a run would, and returns its exit code and output."""
+    process = await asyncio.create_subprocess_shell(
+        command, cwd=cwd, env=run_env(), stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT)
+    try:
+        out, _ = await asyncio.wait_for(process.communicate(), timeout)
+    except asyncio.TimeoutError:
+        process.kill()
+        return -1, "(timed out)"
+    return process.returncode, out.decode("utf-8", errors="replace").strip()
+
+
 def outcome_of(code: int, stopped: bool, seconds: float, output: str) -> str:
     if stopped:
         clean = seconds >= STARTED_OK_AFTER and not any(m in output for m in ERROR_MARKERS)
@@ -48,6 +65,7 @@ class RunPanel(Vertical):
 
     def compose(self) -> ComposeResult:
         yield Static(f"$ {self.command}", classes="command", markup=False)
+        yield Static(f"Runs in {self.project.root}", classes="hint", markup=False)
         with Horizontal(classes="run-buttons"):
             yield Button("Run it" if self.kind == "app" else "Run the tests", id="run", variant="primary")
             yield Button("Stop", id="stop", disabled=True)
@@ -103,9 +121,8 @@ class RunPanel(Vertical):
         self.stopped = False
         output: list[str] = []
         started = time.monotonic()
-        # Unbuffered so a Python app's prints show up as they happen, not when it exits.
-        env = {**os.environ, "PYTHONUNBUFFERED": "1", "PYTHONIOENCODING": "utf-8"}
-        group = ({"creationflags": subprocess.CREATE_NEW_PROCESS_GROUP} if sys.platform == "win32"
+        env = run_env()
+        group =({"creationflags": subprocess.CREATE_NEW_PROCESS_GROUP} if sys.platform == "win32"
                  else {"start_new_session": True})
         self.process = await asyncio.create_subprocess_shell(
             self.command, cwd=self.project.root, env=env,

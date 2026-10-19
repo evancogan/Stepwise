@@ -115,15 +115,37 @@ class CodePanel(Vertical):
 
     @on(Checkbox.Changed, "#done")
     def ticked(self, event: Checkbox.Changed) -> None:
+        if event.value and (problem := self.tick_problem()):
+            with event.checkbox.prevent(Checkbox.Changed):
+                event.checkbox.value = False
+            self.project.log("code_done_refused", item=self.prefix, reason=problem)
+            self.app.notify(problem, severity="warning", timeout=8)
+            return
+        if event.value:
+            self.project.record_tick(self.file_name, self.prefix)
         self.project.set_answer(f"{self.prefix}.done", "yes" if event.value else "")
         self.project.log("code_done", item=self.prefix, done=event.value)
         self.project.write_notes()
         self.app.refresh_sidebar()
         self.app.schedule_preview()
 
+    def tick_problem(self) -> str:
+        """Why this step can't be ticked done yet, or an empty string."""
+        path = self.project.code_path(self.file_name)
+        if not self.file_name:
+            return "Pick the file this step goes in first."
+        if path is None or not path.is_file():
+            return f"Stepwise can't find {self.file_name}."
+        if not path.read_text(encoding="utf-8", errors="replace").strip():
+            return f"{self.file_name} is empty. Write this step's code and save it first."
+        if not self.project.changed_since_last_tick(self.file_name, self.prefix):
+            return (f"{self.file_name} hasn't changed since you ticked the last step in it. Write this "
+                    "step's code and save, then tick it.")
+        return ""
+
     @on(Button.Pressed, "#add-file")
     async def add_file(self) -> None:
-        await self.app.go_to_files()
+        await self.app.go_to_list("files")
 
     @on(Button.Pressed, "#open-file")
     def open_file(self) -> None:

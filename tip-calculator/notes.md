@@ -33,12 +33,6 @@ Building it myself would give me proof of ownership, that I made my own tip calc
 
 The app opens, and a screen displays a text field asking the user for a total. A textbox is used as the entry field. Another text field is below it, asking for a tip percentage. The tip percentage is input
 
-**Which step does everything else depend on, and why?**
-
-The tip calculation logic, and the app opening at all, step 1.
-
-If the tip calculation logic is off, the whole app is considered imperfect, so that line of code is really important. The app not opening at all would also impede the user, so healthy builds and good commit habits are necessary prevention habits.
-
 **Once the first version works, what would you add next?**
 
 I would add a gratuity tracker that tells the user their tip history, and average tip.
@@ -91,11 +85,11 @@ tip percentage and total
 
 There is not enough data for a logical operation to output a new number
 
-**Which step was hardest to describe in plain words, and what made it hard?**
-
-Getting the user experience right is perhaps the hardest part, everything else is an easy line of code
-
 ## 4. README Part One
+
+**Files**
+
+- tip-calculator.py
 
 **Where will people use your app: in a browser, on a phone, on a desktop, or in a terminal?**
 
@@ -103,20 +97,56 @@ PyQt6 (Python)
 
 **What are you building it with? Name the language, framework and libraries, and say why you picked them.**
 
-The user sees the gui, python handles the logic, and pyqt6 has frameworks for said gui
+I chose pyqt6, because  pyqt6 has frameworks for the gui.
 
 I chose this over tkinter because it's newer and I'm interested in learning its syntax.
 
-PyQt6 is the library I'm using, it offers gui assistance in the form of pre-written frameworks
+It offers gui assistance in the form of pre-written frameworks
 
 PyQt6 is in python, but I don't know it yet, so it costs some learning time. The size will be limited to what python ends up needing to save.
 
 **What will you write, run and debug it with? Your editor, runtime and package manager.**
 
-The editor I'm using is vscode
+The editor I'm using is vscode, running Python 3.14.7
 
-**Which of these choices are you least sure about, and how could you test it quickly?**
+**How does someone get those installed? Write the steps you'd give a friend: making a virtual environment, installing the libraries, anything else. Stepwise won't run these.**
 
-I'm least sure about the UI, I still don't know how I'll do that, it could be that I have to copy/paste a lot of documentation examples
+Run from the repo root. The commands assume C:\Repos\Stepwise, and the venv lives at C:\Repos\Stepwise\.venv.
 
-I could try to look at the doc first and break it down into pseudocode
+Step 1 (only if activation is blocked):
+
+ Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned
+
+(lets PowerShell run the activate script. It applies only to the current window and resets when you close it.)
+
+Step 2: Activate the venv with .venv\Scripts\Activate.ps1.
+
+Step 3: Start the app with python
+
+tip-calculator\tip-calculator.py
+
+## 5. Syntax Implementation
+
+**Step 1: A screen displays a text field: "Enter total"** in `tip-calculator.py`, done
+
+Stuck on step 1: I found the docs to be helpful https://doc.qt.io/qtforpython-6/gettingstarted.html#getting-started. This got me installing qt for python packages.
+
+**Step 2: A textbox is displayed underneath it** in `tip-calculator.py`, done
+
+**Step 3: Another text field pops up: "Tip Percentage"** in `tip-calculator.py`, done
+
+**Step 4: A slider with a number that rolls with it is shown below it** in `tip-calculator.py`, done
+
+**Step 5: The app calculates: total * tip percentage** in `tip-calculator.py`, done
+
+**Step 6: The app displays tip to give** in `tip-calculator.py`, done
+
+## 6. App Execution
+
+**What one command starts your app? Stepwise runs it inside your project folder, just like typing it into a terminal there. Like: python main.py**
+
+python tip-calculator.py
+
+**It ran! What did you see, and how does it compare to what you described back in stage 1?**
+
+I had to use more of the python

@@ -64,7 +64,7 @@ class StepEditor(Vertical):
     """`name` is the list it edits: "steps", "files" or "tests". Each item's own answers
     (its pseudo-code, file, tick…) travel with it when it's moved or removed."""
 
-    NOUNS = {"steps": "step", "files": "file", "tests": "test"}
+    NOUNS = {"steps": "step", "files": "file", "prereqs": "prerequisite", "tests": "test"}
 
     def __init__(self, project: Project, name: str = "steps", title: str = "Your steps", placeholder: str = ""):
         super().__init__(classes="step-editor")

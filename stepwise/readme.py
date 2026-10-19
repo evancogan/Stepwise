@@ -66,6 +66,9 @@ def draft(project: Project, live: Mapping[str, str] | None = None, here: str | N
                 lines.append(f"- `{test_file}`: the tests")
             structure = "\n".join(lines)
             body.append(highlight(structure) if here == "list:files" else structure)
+        if section == "Prerequisites" and (needs := project.prereqs()):
+            listing = "\n".join(f"- {name}" + (f": {purpose}" if purpose else "") for name, purpose in needs)
+            body.append(highlight(listing) if here == "list:prereqs" else listing)
         if section == "Testing" and tests:
             done = [bool(project.answer(f"test{n}.done")) for n in range(1, len(tests) + 1)]
             body.append(checklist(tests, done, list_here("tests")))

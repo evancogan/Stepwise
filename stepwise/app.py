@@ -15,9 +15,10 @@ from textual.widget import Widget
 from textual.widgets import Button, Footer, Input, Label, Markdown, OptionList, Static
 from textual.widgets.option_list import Option
 
-from .answer import AnswerArea
+from .answer import AnswerArea, AnswerLine, SavesAnswer
 from .coding import CodePanel
 from .pages import Page, page_missing, pages
+from .prereqs import CheckPanel
 from .readme import draft, part_two
 from .runner import RunPanel
 from .stages import INTROS, LAST_BUILT, PSEUDO_PRIMER, PSEUDO_WORDS, PSEUDOCODE_URL, TEST_PRIMER, TITLES
@@ -116,13 +117,14 @@ class StepwiseApp(App):
         await container.remove_children()
         await container.mount_all(self.page_widgets(here))
         container.scroll_home(animate=False)
-        if field := next(iter(self.query("#stage AnswerArea, #stage StepEditor Input")), None):
+        if field := next(iter(self.query("#stage AnswerArea, #stage AnswerLine, #stage StepEditor Input")), None):
             field.focus()
         self.schedule_preview()
 
-    async def go_to_files(self) -> None:
+    async def go_to_list(self, name: str) -> None:
+        """Jumps to the stage 4 page that edits the files or prerequisites list."""
         stage_four = pages(self.project, 4)
-        await self.go(4, next(i for i, p in enumerate(stage_four) if p.kind == "list" and p.key == "files"))
+        await self.go(4, next(i for i, p in enumerate(stage_four) if p.kind == "list" and p.key == name))
 
     async def action_next(self) -> None:
         if self.current > LAST_BUILT:
@@ -219,9 +221,12 @@ class StepwiseApp(App):
 
     def save_all(self) -> None:
         """Writes any answer still waiting on its idle timer, then rebuilds notes.md once."""
-        saved = [area.save() for area in self.query(AnswerArea)]
+        saved = [field.save() for field in self.answer_fields()]
         if any(saved):
             self.project.write_notes()
+
+    def answer_fields(self) -> list[SavesAnswer]:
+        return [*self.query(AnswerArea), *self.query(AnswerLine)]
 
     async def action_quit(self) -> None:
         self.save_all()
@@ -246,7 +251,7 @@ class StepwiseApp(App):
             return
         here = self.pages[self.page]
         focus = {"answer": here.key, "list": f"list:{here.key}", "code": f"code:{here.key}:{here.item}"}.get(here.kind)
-        live = {area.key: area.text for area in self.query(AnswerArea)}
+        live = {field.key: field.text for field in self.answer_fields()}
         markdown = self.query_one("#preview-md", Markdown)
         await markdown.update(draft(self.project, live, focus))
         # Keep the part of the README this page writes in view.
@@ -280,7 +285,10 @@ class StepwiseApp(App):
         if page.section and page.kind in ("answer", "list", "code"):
             widgets.append(Static(f"→ README · {page.section}", classes="tag"))
 
-        if page.kind == "answer":
+        if page.kind == "answer" and page.line:
+            widgets.append(AnswerLine(page.key, p.answer(page.key), page.placeholder))
+            widgets.append(Static(f"Runs in {p.root}", classes="hint", markup=False))
+        elif page.kind == "answer":
             widgets.append(AnswerArea(page.key, p.answer(page.key), page.placeholder))
             if page.key.startswith("pseudo") and page.key[6:].isdigit():
                 widgets.append(Static(f"Pseudocode words: {PSEUDO_WORDS}", classes="hint"))
@@ -291,7 +299,7 @@ class StepwiseApp(App):
             widgets.append(Static(p.answer("intent"), classes="quote", markup=False))
             widgets.append(StepEditor(p, "steps", "Your steps"))
         elif page.kind == "list":
-            title = "Your files" if page.key == "files" else "Your tests"
+            title = {"files": "Your files", "prereqs": "Your prerequisites", "tests": "Your tests"}[page.key]
             widgets.append(StepEditor(p, page.key, title))
         elif page.kind == "info":
             widgets.append(Markdown(PSEUDO_PRIMER if page.key == "pseudo" else TEST_PRIMER, classes="primer"))
@@ -299,6 +307,8 @@ class StepwiseApp(App):
             widgets.append(Button("Open the article", id="open-article"))
         elif page.kind == "code":
             widgets.append(CodePanel(p, page.key, page.item))
+        elif page.kind == "check":
+            widgets.append(CheckPanel(p))
         elif page.kind == "run":
             if page.key == "app":
                 widgets.append(Static("If your app opens a window or keeps running, press Stop once you've "

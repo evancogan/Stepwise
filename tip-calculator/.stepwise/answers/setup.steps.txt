@@ -1,0 +1,13 @@
+Run from the repo root. The commands assume C:\Repos\Stepwise, and the venv lives at C:\Repos\Stepwise\.venv.
+
+Step 1 (only if activation is blocked):
+
+ Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned
+
+(lets PowerShell run the activate script. It applies only to the current window and resets when you close it.)
+
+Step 2: Activate the venv with .venv\Scripts\Activate.ps1.
+
+Step 3: Start the app with python
+
+tip-calculator\tip-calculator.py

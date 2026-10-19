@@ -84,6 +84,11 @@ FILES_QUESTION = (
     "file when it starts doing a second job, gets hard to read, or has code you'd want to use somewhere else. "
     "One per line: the file name, a colon, and what it's for, like tip.py: works out the tip"
 )
+PREREQS_QUESTION = (
+    "What does someone need installed before your app will run? One per line: first the language and its "
+    "version, then each library by the name you import it with, and what it's for. Like: Python 3.14, "
+    "then PySide6: draws the window"
+)
 TESTS_QUESTION = "What should you test? One thing per line, in plain words, like: the tip is 0 when the total is 0"
 
 RUN_FAILED = "It didn't run. Read the error above. In your own words, what went wrong, and which step's code is it in?"
@@ -97,6 +102,7 @@ SECTIONS = [
     "Build plan",
     "How it works",
     "Project structure",
+    "Prerequisites",
     "Getting started",
     "Tech stack",
     "Development",
@@ -108,8 +114,10 @@ SECTIONS = [
 ]
 
 # Sections that only exist once the app is built; README Part Two appends whichever are missing.
+# Prerequisites is written in Part One, and listed here for READMEs drafted before it existed.
 PART_TWO_SECTIONS = [
     "Project structure",
+    "Prerequisites",
     "Getting started",
     "Status",
     "Known issues",
@@ -154,9 +162,13 @@ QUESTIONS: dict[int, list[Question]] = {
                  "Tech stack", "Built with"),
         Question("stack.tools", "What will you write, run and debug it with? Your editor, runtime and package manager.",
                  "Development"),
+        Question("setup.steps", "How does someone get those installed? Write the steps you'd give a friend: making a "
+                 "virtual environment, installing the libraries, anything else. Stepwise won't run these.",
+                 "Prerequisites", "Setting it up"),
     ],
     6: [
-        Question("run.command", "How do you start your app? Type it the way you would in a terminal, like: python main.py",
+        Question("run.command", "What one command starts your app? Stepwise runs it inside your project folder, "
+                 "just like typing it into a terminal there. Like: python main.py",
                  "Getting started", "Running it", code=True),
         Question("run.result", "It ran! What did you see, and how does it compare to what you described back in stage 1?",
                  "Status"),

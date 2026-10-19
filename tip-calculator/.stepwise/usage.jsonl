@@ -245,3 +245,88 @@
 {"t": "2026-10-18T20:44:18", "event": "view", "stage": 5, "page": "done"}
 {"t": "2026-10-18T20:51:04", "event": "view", "stage": 4, "page": "stack.runs"}
 {"t": "2026-10-18T20:51:06", "event": "answer", "key": "stack.runs", "seconds": 2.0, "changed": false, "chars": 14, "lines": 1}
+{"t": "2026-10-18T21:38:22", "event": "open", "stage": 5}
+{"t": "2026-10-18T21:38:22", "event": "view", "stage": 5, "page": "steps", "item": 1}
+{"t": "2026-10-18T21:38:31", "event": "answer", "key": "code1.stuck", "seconds": 8.3, "changed": false, "chars": 0, "lines": 0}
+{"t": "2026-10-18T21:38:32", "event": "view", "stage": 4, "page": "files", "item": null}
+{"t": "2026-10-18T21:38:50", "event": "view", "stage": 1, "page": "intent", "item": null}
+{"t": "2026-10-18T21:38:51", "event": "view", "stage": 1, "page": "idea.use", "item": null}
+{"t": "2026-10-18T21:38:52", "event": "answer", "key": "idea.use", "seconds": 1.0, "changed": false, "chars": 149, "lines": 1}
+{"t": "2026-10-18T21:38:52", "event": "view", "stage": 1, "page": "idea.why", "item": null}
+{"t": "2026-10-18T21:38:53", "event": "view", "stage": 2, "page": "steps", "item": null}
+{"t": "2026-10-18T21:38:55", "event": "view", "stage": 2, "page": "steps.walk", "item": null}
+{"t": "2026-10-18T21:38:56", "event": "answer", "key": "steps.walk", "seconds": 1.0, "changed": false, "chars": 205, "lines": 1}
+{"t": "2026-10-18T21:38:56", "event": "view", "stage": 2, "page": "steps.later", "item": null}
+{"t": "2026-10-18T21:38:57", "event": "view", "stage": 3, "page": "pseudo", "item": null}
+{"t": "2026-10-18T21:39:12", "event": "view", "stage": 3, "page": "pseudo1", "item": null}
+{"t": "2026-10-18T21:39:16", "event": "answer", "key": "pseudo1", "seconds": 3.0, "changed": false, "chars": 37, "lines": 1}
+{"t": "2026-10-18T21:39:16", "event": "view", "stage": 3, "page": "pseudo2", "item": null}
+{"t": "2026-10-18T21:39:17", "event": "answer", "key": "pseudo2", "seconds": 1.5, "changed": false, "chars": 18, "lines": 1}
+{"t": "2026-10-18T21:39:17", "event": "view", "stage": 3, "page": "pseudo1", "item": null}
+{"t": "2026-10-18T21:39:18", "event": "view", "stage": 3, "page": "pseudo2", "item": null}
+{"t": "2026-10-18T21:39:19", "event": "view", "stage": 3, "page": "pseudo3", "item": null}
+{"t": "2026-10-18T21:39:20", "event": "answer", "key": "pseudo3", "seconds": 1.3, "changed": false, "chars": 22, "lines": 1}
+{"t": "2026-10-18T21:39:20", "event": "view", "stage": 3, "page": "pseudo4", "item": null}
+{"t": "2026-10-18T21:39:22", "event": "answer", "key": "pseudo4", "seconds": 1.4, "changed": false, "chars": 27, "lines": 1}
+{"t": "2026-10-18T21:39:22", "event": "view", "stage": 3, "page": "pseudo5", "item": null}
+{"t": "2026-10-18T21:39:23", "event": "view", "stage": 3, "page": "pseudo4", "item": null}
+{"t": "2026-10-18T21:39:24", "event": "answer", "key": "pseudo4", "seconds": 1.6, "changed": false, "chars": 27, "lines": 1}
+{"t": "2026-10-18T21:39:24", "event": "view", "stage": 3, "page": "pseudo5", "item": null}
+{"t": "2026-10-18T21:39:25", "event": "view", "stage": 3, "page": "pseudo6", "item": null}
+{"t": "2026-10-18T21:39:25", "event": "view", "stage": 3, "page": "pseudo.state", "item": null}
+{"t": "2026-10-18T21:39:27", "event": "answer", "key": "pseudo.state", "seconds": 1.7, "changed": false, "chars": 43, "lines": 1}
+{"t": "2026-10-18T21:39:27", "event": "view", "stage": 3, "page": "pseudo.input", "item": null}
+{"t": "2026-10-18T21:39:29", "event": "answer", "key": "pseudo.input", "seconds": 2.4, "changed": false, "chars": 97, "lines": 3}
+{"t": "2026-10-18T21:39:29", "event": "view", "stage": 4, "page": "stack.runs", "item": null}
+{"t": "2026-10-18T21:39:31", "event": "answer", "key": "stack.runs", "seconds": 1.9, "changed": false, "chars": 14, "lines": 1}
+{"t": "2026-10-18T21:39:31", "event": "view", "stage": 4, "page": "stack.built", "item": null}
+{"t": "2026-10-18T21:40:44", "event": "answer", "key": "stack.built", "seconds": 72.8, "changed": true, "chars": 353, "lines": 7}
+{"t": "2026-10-18T21:40:44", "event": "view", "stage": 4, "page": "files", "item": null}
+{"t": "2026-10-18T21:40:51", "event": "view", "stage": 4, "page": "stack.built", "item": null}
+{"t": "2026-10-18T21:40:53", "event": "answer", "key": "stack.built", "seconds": 1.5, "changed": false, "chars": 353, "lines": 7}
+{"t": "2026-10-18T21:40:53", "event": "view", "stage": 4, "page": "files", "item": null}
+{"t": "2026-10-18T21:41:06", "event": "file", "action": "add", "index": 1, "text": "tip-calculator.py"}
+{"t": "2026-10-18T21:41:09", "event": "view", "stage": 4, "page": "stack.tools", "item": null}
+{"t": "2026-10-18T21:41:11", "event": "answer", "key": "stack.tools", "seconds": 2.0, "changed": false, "chars": 53, "lines": 1}
+{"t": "2026-10-18T21:41:12", "event": "view", "stage": 4, "page": "readme", "item": null}
+{"t": "2026-10-18T21:41:14", "event": "readme", "action": "draft", "file": "README.draft.md"}
+{"t": "2026-10-18T21:41:14", "event": "readme", "action": "open_editor", "file": "README.draft.md", "what": "draft"}
+{"t": "2026-10-18T21:41:26", "event": "view", "stage": 5, "page": "steps", "item": 1}
+{"t": "2026-10-18T21:41:42", "event": "answer", "key": "code1.stuck", "seconds": 15.7, "changed": false, "chars": 0, "lines": 0}
+{"t": "2026-10-18T21:41:42", "event": "code_open", "file": "tip-calculator.py"}
+{"t": "2026-10-18T21:42:22", "event": "view", "stage": 3, "page": "pseudo", "item": null}
+{"t": "2026-10-18T21:42:24", "event": "view", "stage": 4, "page": "stack.runs", "item": null}
+{"t": "2026-10-18T21:42:28", "event": "answer", "key": "stack.runs", "seconds": 3.8, "changed": false, "chars": 14, "lines": 1}
+{"t": "2026-10-18T21:42:58", "event": "view", "stage": 5, "page": "steps", "item": 1}
+{"t": "2026-10-18T21:43:16", "event": "answer", "key": "code1.stuck", "seconds": 17.7, "changed": false, "chars": 0, "lines": 0}
+{"t": "2026-10-18T21:43:36", "event": "answer", "key": "code1.stuck", "seconds": 10.5, "changed": true, "chars": 30, "lines": 1}
+{"t": "2026-10-18T21:44:23", "event": "answer", "key": "code1.stuck", "seconds": 44.8, "changed": true, "chars": 146, "lines": 1}
+{"t": "2026-10-18T21:53:45", "event": "answer", "key": "code1.stuck", "seconds": 60.5, "changed": false, "chars": 146, "lines": 1}
+{"t": "2026-10-18T21:53:45", "event": "blocked", "stage": 5, "page": "steps", "reason": "Tick “It's written and saved” when it's done."}
+{"t": "2026-10-18T21:53:48", "event": "code_done", "item": "code1", "done": true}
+{"t": "2026-10-18T21:53:49", "event": "view", "stage": 5, "page": "steps", "item": 2}
+{"t": "2026-10-18T21:54:06", "event": "answer", "key": "code2.stuck", "seconds": 16.9, "changed": false, "chars": 0, "lines": 0}
+{"t": "2026-10-18T22:00:53", "event": "code_done", "item": "code2", "done": true}
+{"t": "2026-10-18T22:00:54", "event": "view", "stage": 5, "page": "steps", "item": 3}
+{"t": "2026-10-18T22:00:55", "event": "code_done", "item": "code3", "done": true}
+{"t": "2026-10-18T22:00:56", "event": "view", "stage": 5, "page": "steps", "item": 4}
+{"t": "2026-10-18T22:00:57", "event": "code_done", "item": "code4", "done": true}
+{"t": "2026-10-18T22:00:57", "event": "view", "stage": 5, "page": "steps", "item": 5}
+{"t": "2026-10-18T22:00:59", "event": "code_done", "item": "code5", "done": true}
+{"t": "2026-10-18T22:00:59", "event": "view", "stage": 5, "page": "steps", "item": 6}
+{"t": "2026-10-18T22:01:00", "event": "code_done", "item": "code6", "done": true}
+{"t": "2026-10-18T22:01:00", "event": "advance", "stage": 6}
+{"t": "2026-10-18T22:01:00", "event": "view", "stage": 6, "page": "run.command", "item": null}
+{"t": "2026-10-18T22:01:07", "event": "answer", "key": "run.command", "seconds": 5.9, "changed": false, "chars": 0, "lines": 0}
+{"t": "2026-10-18T22:13:28", "event": "answer", "key": "run.command", "seconds": 10.3, "changed": false, "chars": 0, "lines": 0}
+{"t": "2026-10-18T22:13:54", "event": "answer", "key": "run.command", "seconds": 2.3, "changed": false, "chars": 0, "lines": 0}
+{"t": "2026-10-18T22:19:04", "event": "answer", "key": "run.command", "seconds": 152.2, "changed": true, "chars": 458, "lines": 13}
+{"t": "2026-10-18T22:19:04", "event": "view", "stage": 6, "page": "app", "item": null}
+{"t": "2026-10-18T22:19:11", "event": "run", "kind": "app", "command": "Run from the repo root. The commands assume C:\\Repos\\Stepwise, and the venv lives at C:\\Repos\\Stepwise\\.venv.\n\nStep 1 (only if activation is blocked):\n\n Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned\n\n(lets PowerShell run the activate script. It applies only to the current window and resets when you close it.)\n\nStep 2: Activate the venv with .venv\\Scripts\\Activate.ps1.\n\nStep 3: Start the app with python\n\ntip-calculator\\tip-calculator.py", "outcome": "not_found", "code": 1, "seconds": 0.0, "stopped": false}
+{"t": "2026-10-18T22:22:06", "event": "view", "stage": 6, "page": "run.command", "item": null}
+{"t": "2026-10-18T22:22:25", "event": "answer", "key": "run.command", "seconds": 19.2, "changed": true, "chars": 24, "lines": 1}
+{"t": "2026-10-18T22:22:25", "event": "view", "stage": 6, "page": "app", "item": null}
+{"t": "2026-10-18T22:22:31", "event": "run", "kind": "app", "command": "python tip-calculator.py", "outcome": "ok", "code": 0, "seconds": 2.0, "stopped": false}
+{"t": "2026-10-18T22:22:39", "event": "view", "stage": 6, "page": "run.result", "item": null}
+{"t": "2026-10-18T22:23:16", "event": "answer", "key": "run.result", "seconds": 37.0, "changed": false, "chars": 0, "lines": 0}
+{"t": "2026-10-18T22:25:15", "event": "answer", "key": "run.result", "seconds": 87.6, "changed": true, "chars": 31, "lines": 1}

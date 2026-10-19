@@ -27,6 +27,7 @@ META = ".stepwise"
 ITEM_KEYS = {
     "steps": ["pseudo{n}", "code{n}.file", "code{n}.done", "code{n}.stuck"],
     "files": [],
+    "prereqs": [],
     "tests": ["test{n}.pseudo", "test{n}.done", "test{n}.stuck"],
 }
 
@@ -161,6 +162,8 @@ class Project:
         if name == "files":
             for file_name, _ in self.files():
                 self.create_file(file_name)
+        if name in ("files", "prereqs"):
+            self.set("prereq_check", "")  # what's installed or imported may no longer match
         self.write_notes()
 
     def steps(self) -> list[str]:
@@ -172,6 +175,10 @@ class Project:
     def files(self) -> list[tuple[str, str]]:
         """The app's files as (name, purpose)."""
         return [parse_file_line(line) for line in self.items("files")]
+
+    def prereqs(self) -> list[tuple[str, str]]:
+        """What the app needs installed, as (name, purpose): a language line, then import names."""
+        return [parse_file_line(line) for line in self.items("prereqs")]
 
     def pseudo(self) -> list[str]:
         return [self.answer(f"pseudo{n}") for n in range(1, len(self.steps()) + 1)]
@@ -193,6 +200,20 @@ class Project:
 
     def step_file(self, n: int) -> str:
         return self.answer(f"code{n}.file")
+
+    def file_sha(self, name: str) -> str:
+        path = self.code_path(name)
+        return sha(path.read_text(encoding="utf-8", errors="replace")) if path and path.is_file() else ""
+
+    def changed_since_last_tick(self, name: str, item: str) -> bool:
+        """Whether the file has new code since another step or test in it was last ticked done.
+        A tick needs new code, so one change can't be ticked off as several steps. `item` is the
+        one being ticked (like "code3"), so unticking and re-ticking the same step still works."""
+        last_item, _, last_sha = self.get(f"tick:{name}").partition(":")
+        return last_item == item or self.file_sha(name) != last_sha
+
+    def record_tick(self, name: str, item: str) -> None:
+        self.set(f"tick:{name}", f"{item}:{self.file_sha(name)}")
 
     # --- runs ------------------------------------------------------------
 
@@ -278,6 +299,8 @@ class Project:
                         parts.append(f"**Step {n}: {step}**\n\n```\n{text}\n```\n")
             if stage == 4 and self.items("files"):
                 parts.append("**Files**\n\n" + "".join(f"- {f}\n" for f in self.items("files")))
+            if stage == 4 and self.items("prereqs"):
+                parts.append("**Prerequisites**\n\n" + "".join(f"- {r}\n" for r in self.items("prereqs")))
             if stage == 5:
                 for n, step in enumerate(steps, 1):
                     if file := self.step_file(n):
