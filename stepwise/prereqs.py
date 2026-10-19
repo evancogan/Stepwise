@@ -1,27 +1,24 @@
-"""Checks the prerequisites the user listed in stage 4: that the language runs, that each
-library is installed, and that the imports in their code match the list."""
+"""Checks an app's prerequisites against its real dependency file (requirements.txt,
+package.json, go.mod, Cargo.toml, pom.xml or build.gradle, *.csproj): that the language runs,
+that every library the code imports is listed and installed, and that nothing built in or
+part of another library is listed as if it needed installing."""
 
-import ast
 import re
-import sys
+import shutil
+import subprocess
 from dataclasses import dataclass
 
 from rich.markup import escape
 from textual import on
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
-from textual.widgets import Button, Static
+from textual.widgets import Button, Label, Static, TextArea
 
+from .languages import Import, Language, code_files, detect, saved_date
 from .runner import run_capture
 from .store import Project
 
-# The first word of a prerequisite line that names a language, and how to ask it for its version.
-RUNTIMES = {
-    "python": "python --version", "node": "node --version", "java": "java -version", "go": "go version",
-    "ruby": "ruby --version", "dotnet": "dotnet --version", "php": "php --version", "rust": "rustc --version",
-    "deno": "deno --version", "bun": "bun --version",
-}
-IMPORT_NAME = re.compile(r"^[A-Za-z_]\w*(\.[A-Za-z_]\w*)*$")
+LIVE_CAPABLE = {"python", "javascript", "go"}  # languages whose installed tool can list its own built-ins
 
 
 @dataclass
@@ -30,113 +27,116 @@ class Finding:
     text: str
 
 
-def split(project: Project) -> tuple[list[str], list[str]]:
-    """Prerequisites as (languages, import names)."""
-    runtimes, imports = [], []
-    for name, _ in project.prereqs():
-        first = name.split()[0].lower() if name.split() else ""
-        (runtimes if first in RUNTIMES else imports).append(first if first in RUNTIMES else name)
-    return runtimes, imports
+def version_numbers(text: str) -> list[str]:
+    return re.findall(r"\d+", text)
 
 
-def scan_imports(project: Project) -> tuple[dict[str, list[str]], dict[str, str], list[str]]:
-    """What the user's Python files import:
-    - third-party packages, as {package: [files]}, leaving out the standard library and the user's own modules
-    - names pulled out of a package, as {name: package}, e.g. `from PySide6 import QtCore` gives QtCore: PySide6
-    - notes about files that couldn't be read"""
-    names = [name for name, _ in project.files()] + [project.answer("tests.file").strip()]
-    local = {p.stem for p in project.root.glob("*.py")}
-    local |= {d.name for d in project.root.iterdir() if d.is_dir() and (d / "__init__.py").exists()}
-    found: dict[str, list[str]] = {}
-    parts: dict[str, str] = {}
-    notes = []
-    for name in names:
-        path = project.code_path(name)
-        if not name.endswith(".py") or path is None or not path.is_file():
-            continue
-        try:
-            tree = ast.parse(path.read_text(encoding="utf-8", errors="replace"))
-        except SyntaxError as e:
-            notes.append(f"Couldn't read the imports in {name}: line {e.lineno} has a syntax error.")
-            continue
-        for node in ast.walk(tree):
-            if isinstance(node, ast.Import):
-                modules = [alias.name for alias in node.names]
-            elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
-                modules = [node.module]
-                parts.update({alias.name: node.module.split(".")[0] for alias in node.names})
-            else:
-                continue
-            for module in modules:
-                top = module.split(".")[0]
-                if top not in sys.stdlib_module_names and top not in local and top != "__future__":
-                    found.setdefault(top, [])
-                    if name not in found[top]:
-                        found[top].append(name)
-    return found, parts, notes
+def dependency_file(project: Project, lang: Language) -> tuple[str, list[str] | None, str]:
+    """(file name, the names it lists or None if it can't be read, the problem if any)."""
+    path = lang.dep_path(project)
+    if path is None:
+        return lang.dep_files[0], None, f"There's no {lang.dep_files[0]} yet."
+    try:
+        return path.name, lang.read_deps(path), ""
+    except Exception as e:  # each format fails differently (JSON, TOML, XML); the message is shown as-is
+        return path.name, None, f"Stepwise couldn't read {path.name}: {e}"
 
 
 async def check(project: Project) -> list[Finding]:
+    languages = detect(project)
+    if not languages:
+        return [Finding(None, "Stepwise doesn't recognise the language of your files, so it can't check what "
+                              "they need. Check the Prerequisites in your README by hand.")]
     findings = []
-    runtimes, imports = split(project)
-    is_python = "python" in runtimes or any(name.endswith(".py") for name, _ in project.files())
-    if is_python and "python" not in runtimes:
-        runtimes.insert(0, "python")
-        findings.append(Finding(None, "Your files are Python, so add the Python version you use to the top of "
-                                      "your list, like Python 3.14."))
-    for runtime in runtimes:
-        code, out = await run_capture(RUNTIMES[runtime], project.root)
-        first = out.splitlines()[0] if out else ""
-        findings.append(Finding(True, f"{runtime}: {first}") if code == 0 else
-                        Finding(False, f"{runtime} didn't run ({first or 'no output'}). Is it installed, and can "
+    for lang in languages:
+        findings += await check_language(project, lang)
+    return findings
+
+
+async def check_language(project: Project, lang: Language) -> list[Finding]:
+    async def run(command: str) -> tuple[int, str]:
+        return await run_capture(command, project.root)
+
+    findings = []
+    included = lang.comes_with.removeprefix("comes with ").removeprefix("is part of ")
+
+    # The language itself, and the version the user said the app needs.
+    code, out = await run(lang.version_command)
+    first = out.splitlines()[0] if out else ""
+    if code != 0:
+        findings.append(Finding(False, f"{lang.tool} didn't run ({first or 'no output'}). Is it installed, and can "
                                        "your terminal find it?"))
-    if not runtimes:
-        findings.append(Finding(None, "Stepwise didn't recognise a language in your list, so it can't check "
-                                      "its version. Start the list with one, like Python 3.14."))
-    if not is_python:
-        if imports:
-            findings.append(Finding(None, "Stepwise can only check libraries for Python apps, so check these "
-                                          "yourself: " + ", ".join(imports) + "."))
-        return findings
+    else:
+        findings.append(Finding(True, f"{lang.tool}: {first}"))
+        wanted, have = version_numbers(project.answer("lang.version")), version_numbers(first)
+        if wanted and have and have[:len(wanted)] != wanted:
+            findings.append(Finding(None, f"You said your app needs {lang.tool} {'.'.join(wanted)}, but this "
+                                          f"computer has {'.'.join(have)}. Check that's what you meant."))
 
-    found, parts, notes = scan_imports(project)
-    packages = []  # the listed names that are packages someone installs
-    for name in imports:
-        top = name.split(".")[0]
-        if not IMPORT_NAME.match(name):
-            findings.append(Finding(False, f"“{name}” isn't a name you could import. Use the name from the top of "
-                                           "your file, like PySide6."))
-        elif top in sys.stdlib_module_names:
-            findings.append(Finding(None, f"{name} comes with Python, so it doesn't need to be on your list. "
-                                          "You can remove it."))
-        elif name in parts and parts[name] != name:
-            findings.append(Finding(None, f"{name} is part of {parts[name]} (your code says from {parts[name]} "
-                                          f"import {name}), so listing {parts[name]} covers it. You can remove "
-                                          f"{name}."))
-        else:
-            packages.append(top)
-    packages = sorted(set(packages))
-    if packages:
-        command = f'python -c "import importlib.util as u; print(*[n for n in {packages!r} if u.find_spec(n) is None])"'
-        code, out = await run_capture(command, project.root)
-        if code != 0:
-            findings.append(Finding(False, f"Stepwise couldn't run python to check your libraries: {out[-200:]}"))
-        else:
-            missing = set(out.split())
-            findings += [Finding(False, f"Python can't find {n}. If it's part of a bigger library, list that "
-                                        "library instead. If it's a library of its own, install it with your setup "
-                                        "steps from stage 4. The name you install isn't always the name you "
-                                        "import, so check the library's docs.")
-                         if n in missing else Finding(True, f"{n} is installed") for n in packages]
+    builtins = await lang.builtins(run)
+    if builtins.live:
+        findings.append(Finding(True, f"Knows what {included} includes, from your installed {lang.tool}."))
+    else:
+        tip = f" Install {lang.tool} for an exact list." if lang.key in LIVE_CAPABLE else ""
+        findings.append(Finding(None, f"Using Stepwise's saved list of what {included} includes "
+                                      f"(fetched {saved_date()}).{tip}"))
 
-    declared = {n.lower() for n in packages}
-    used = {m.lower() for m in found}
-    findings += [Finding(False, f"Your code imports {module} (in {', '.join(files)}), but it isn't in your "
-                                "prerequisites. Add it in stage 4.")
-                 for module, files in sorted(found.items()) if module.lower() not in declared]
-    findings += [Finding(None, f"You listed {n}, but your code doesn't import it. Remove it if you don't use it "
-                               "any more, so your README stays right.")
-                 for n in packages if n.lower() not in used]
+    file_name, deps, problem = dependency_file(project, lang)
+    if deps is None:
+        findings.append(Finding(False, f"{problem} Press Edit dependency file to fix it."))
+
+    imports, notes = [], []
+    for name in code_files(project, lang):
+        path = project.code_path(name)
+        if path is None or not path.is_file():
+            continue
+        try:
+            imports += lang.scan(path.read_text(encoding="utf-8", errors="replace"), name)
+        except SyntaxError as e:
+            notes.append(f"Couldn't read the imports in {name}: line {e.lineno} has a syntax error.")
+    deps_path = lang.dep_path(project)
+    parts = {i.name: i.part_of for i in imports if i.part_of}
+    libraries = [i for i in imports if not i.part_of
+                 and not lang.is_builtin(i.name, builtins) and not lang.is_local(i, project, deps_path)]
+
+    if deps is not None:
+        severity = False if lang.reliable_match else None
+        real_deps = []
+        for dep in deps:
+            if dep in parts:
+                findings.append(Finding(False, f"{dep} is part of {parts[dep]} (your code says from {parts[dep]} "
+                                               f"import {dep}), so it doesn't go in {file_name}. {parts[dep]} does."))
+            elif lang.is_builtin(dep, builtins):
+                findings.append(Finding(severity, f"{dep} {lang.comes_with}, so it doesn't go in {file_name}. "
+                                                  "You can remove it."))
+            else:
+                real_deps.append(dep)
+
+        by_package: dict[str, list[Import]] = {}
+        for imp in libraries:
+            by_package.setdefault(lang.top(imp.name), []).append(imp)
+        for package, uses in sorted(by_package.items()):
+            if not any(lang.matches(uses[0], dep, builtins) for dep in real_deps):
+                files = ", ".join(sorted({i.file for i in uses}))
+                findings.append(Finding(severity, f"Your code imports {package} (in {files}), but {file_name} "
+                                                  "doesn't list it. Add it by the name you'd install it with."))
+        for dep in real_deps:
+            if not dep.startswith("@types/") and not any(lang.matches(i, dep, builtins) for i in libraries):
+                findings.append(Finding(None, f"{file_name} lists {dep}, but your code doesn't import it. Remove "
+                                              "it if you don't use it any more."))
+
+        install = lang.install_hint.format(file=file_name)
+        unknown = []
+        for dep in real_deps:
+            state = lang.installed(dep, project, builtins)
+            if state is None:
+                unknown.append(dep)
+            else:
+                findings.append(Finding(True, f"{dep} is installed") if state else
+                                Finding(False, f"{dep} is in {file_name} but isn't installed. {install}"))
+        if unknown:
+            findings.append(Finding(None, f"Stepwise can't check whether {', '.join(unknown)} "
+                                          f"{'is' if len(unknown) == 1 else 'are'} installed. {install}"))
     findings += [Finding(None, note) for note in notes]
     return findings
 
@@ -151,23 +151,19 @@ class CheckPanel(Vertical):
                      "using the same terminal setup it runs your app with.", classes="intro")
         with Horizontal(classes="run-buttons"):
             yield Button("Check again", id="check", variant="primary")
-            yield Button("Edit prerequisites", id="edit-prereqs")
+            yield Button("Edit dependency file", id="edit-deps")
         yield Static(id="check-results")
 
     def on_mount(self) -> None:
-        if self.project.items("prereqs"):
-            self.run_worker(self.run_check(), exclusive=True, group="check")
-        else:
-            self.query_one("#check-results", Static).update(
-                "[yellow]You haven't listed any prerequisites yet.[/] Press Edit prerequisites to add them.")
+        self.run_worker(self.run_check(), exclusive=True, group="check")
 
     @on(Button.Pressed, "#check")
     def check_again(self) -> None:
         self.run_worker(self.run_check(), exclusive=True, group="check")
 
-    @on(Button.Pressed, "#edit-prereqs")
+    @on(Button.Pressed, "#edit-deps")
     async def edit(self) -> None:
-        await self.app.go_to_list("prereqs")
+        await self.app.go_to_page(4, "deps")
 
     async def run_check(self) -> None:
         results = self.query_one("#check-results", Static)
@@ -183,3 +179,79 @@ class CheckPanel(Vertical):
                      else "[red]Fix the ✗ items, then press Check again.[/]")
         results.update("\n".join(lines))
         self.app.refresh_sidebar()
+
+
+class DependencyPanel(Vertical):
+    """Stage 4: the dependency file for each language the app's files are written in."""
+
+    def __init__(self, project: Project):
+        super().__init__(classes="deps-panel")
+        self.project = project
+        self.languages = detect(project)
+        self._seen: dict[str, float] = {}
+        for lang in self.languages:
+            if lang.dep_path(project) is None:
+                lang.new_dep_path(project).write_text(lang.starter(project), encoding="utf-8", newline="\n")
+                project.log("deps_created", file=lang.new_dep_path(project).name)
+
+    def compose(self) -> ComposeResult:
+        if not self.languages:
+            yield Static("Stepwise doesn't recognise the language of the files you listed, so it can't make a "
+                         "dependency file for you. List the libraries your app needs under Prerequisites in your "
+                         "README instead.", classes="intro")
+            return
+        for lang in self.languages:
+            path = lang.dep_path(self.project)
+            yield Label(f"{lang.name}: {path.name}", classes="question")
+            yield Static(f"Real projects list what has to be installed in a dependency file. For {lang.name} "
+                         f"that's {path.name}. {lang.dep_example} Only list what you installed yourself: things "
+                         "that come with the language, and parts of a library, don't go in.",
+                         classes="intro", markup=False)
+            with Horizontal(classes="file-bar"):
+                if shutil.which("code"):
+                    yield Button("Open in VS Code", id=f"open-{lang.key}", classes="open-deps")
+                yield Static(id=f"deps-status-{lang.key}")
+            yield TextArea("", read_only=True, soft_wrap=False, show_line_numbers=True,
+                           id=f"deps-view-{lang.key}", classes="deps-view")
+
+    def on_mount(self) -> None:
+        self.refresh_files()
+        self.set_interval(1.0, self.refresh_files)
+
+    def refresh_files(self) -> None:
+        for lang in self.languages:
+            path = lang.dep_path(self.project)
+            status = self.query_one(f"#deps-status-{lang.key}", Static)
+            if path is None:
+                status.update(f"[yellow]Can't find {lang.dep_files[0]}.[/]")
+                continue
+            mtime = path.stat().st_mtime
+            if self._seen.get(lang.key) != mtime:
+                self._seen[lang.key] = mtime
+                self.query_one(f"#deps-view-{lang.key}", TextArea).load_text(
+                    path.read_text(encoding="utf-8", errors="replace"))
+                self.app.schedule_preview()  # the file is edited outside Stepwise, so nothing else would
+            _, deps, problem = dependency_file(self.project, lang)
+            if deps is None:
+                status.update(f"[red]{escape(problem)}[/]")
+            elif deps:
+                status.update("Stepwise reads: " + escape(", ".join(deps)))
+            else:
+                status.update("[dim]No libraries listed yet. That's fine if your app doesn't install any.[/]")
+
+    @on(Button.Pressed, ".open-deps")
+    def open_file(self, event: Button.Pressed) -> None:
+        lang = next(l for l in self.languages if event.button.id == f"open-{l.key}")
+        code, path = shutil.which("code"), lang.dep_path(self.project)
+        if code and path:
+            self.project.log("deps_open", file=path.name)
+            subprocess.Popen([code, str(path)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+def deps_missing(project: Project) -> str:
+    """What's wrong with the dependency files, for the stage 4 page gate."""
+    for lang in detect(project):
+        _, deps, problem = dependency_file(project, lang)
+        if deps is None:
+            return problem
+    return ""

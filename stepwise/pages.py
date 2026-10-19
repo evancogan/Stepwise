@@ -2,8 +2,9 @@
 
 from dataclasses import dataclass
 
-from .stages import (FILES_QUESTION, INTENT_QUESTION, LAST_BUILT, PREREQS_QUESTION, PSEUDO_PLACEHOLDER, QUESTION,
-                     TESTS_QUESTION, TEST_PLACEHOLDER)
+from .prereqs import deps_missing
+from .stages import (FILES_QUESTION, INTENT_QUESTION, LAST_BUILT, PSEUDO_PLACEHOLDER, QUESTION, TESTS_QUESTION,
+                     TEST_PLACEHOLDER)
 from .store import Project
 
 
@@ -11,9 +12,10 @@ from .store import Project
 class Page:
     """One screen within a stage. Each holds a single thing to do, so no page is a wall of fields.
 
-    kind: "answer", "list" (key is the list: steps, files, prereqs or tests), "info" (key is the
-    primer: pseudo or tests), "code" (key is steps or tests, item is the position), "check" (the
-    prerequisites check), "run" (key is app or tests), "readme", "part2" or "done".
+    kind: "answer", "list" (key is the list: steps, files or tests), "info" (key is the primer:
+    pseudo or tests), "deps" (the dependency file), "code" (key is steps or tests, item is the
+    position), "check" (the prerequisites check), "run" (key is app or tests), "readme", "part2"
+    or "done".
     """
     kind: str
     key: str = ""
@@ -28,7 +30,7 @@ class Page:
 
 def question(key: str, note: str = "", label: str = "") -> Page:
     q = QUESTION[key]
-    return Page("answer", q.key, q.prompt, q.section, label=label or q.heading or q.section, note=note, line=q.code)
+    return Page("answer", q.key, q.prompt, q.section, label=label or q.heading or q.section, note=note, line=q.code or q.line)
 
 
 def pages(project: Project, stage: int) -> list[Page]:
@@ -49,7 +51,8 @@ def pages(project: Project, stage: int) -> list[Page]:
         return [question("stack.runs"), question("stack.built"),
                 Page("list", "files", FILES_QUESTION, "Project structure", label="Your files"),
                 question("stack.tools"),
-                Page("list", "prereqs", PREREQS_QUESTION, "Prerequisites", label="Prerequisites"),
+                question("lang.version", label="Language version"),
+                Page("deps", section="Prerequisites", label="Dependency file"),
                 question("setup.steps", label="Setting it up"), Page("readme", label="README draft")]
     if stage == 5:
         return [Page("code", "steps", f"Step {n} of {len(steps)}: {step}", "Build plan",
@@ -81,12 +84,11 @@ def page_missing(project: Project, page: Page) -> str:
     if page.kind == "list" and not project.items(page.key):
         return {"steps": "Add at least one step before moving on.",
                 "files": "List at least one file before moving on.",
-                "prereqs": "List at least the language your app is written in before moving on.",
                 "tests": "Add at least one test before moving on."}[page.key]
     if page.kind == "answer" and page.line and "\n" in project.answer(page.key):
         return "Use one command on one line. Setup steps go in stage 4, under Setting it up."
-    if page.kind == "check" and not project.items("prereqs"):
-        return "List your prerequisites in stage 4 first."
+    if page.kind == "deps" and (problem := deps_missing(project)):
+        return problem
     if page.kind == "check" and project.get("prereq_check") != "ok":
         return "Fix what the check found, then press Check again."
     if page.kind == "code":

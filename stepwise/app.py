@@ -18,7 +18,7 @@ from textual.widgets.option_list import Option
 from .answer import AnswerArea, AnswerLine, SavesAnswer
 from .coding import CodePanel
 from .pages import Page, page_missing, pages
-from .prereqs import CheckPanel
+from .prereqs import CheckPanel, DependencyPanel
 from .readme import draft, part_two
 from .runner import RunPanel
 from .stages import INTROS, LAST_BUILT, PSEUDO_PRIMER, PSEUDO_WORDS, PSEUDOCODE_URL, TEST_PRIMER, TITLES
@@ -121,10 +121,14 @@ class StepwiseApp(App):
             field.focus()
         self.schedule_preview()
 
+    async def go_to_page(self, stage: int, kind: str, key: str = "") -> None:
+        """Jumps to the first page of a kind (and key, if given) in a stage."""
+        stage_pages = pages(self.project, stage)
+        await self.go(stage, next(i for i, p in enumerate(stage_pages)
+                                  if p.kind == kind and (not key or p.key == key)))
+
     async def go_to_list(self, name: str) -> None:
-        """Jumps to the stage 4 page that edits the files or prerequisites list."""
-        stage_four = pages(self.project, 4)
-        await self.go(4, next(i for i, p in enumerate(stage_four) if p.kind == "list" and p.key == name))
+        await self.go_to_page(4, "list", name)
 
     async def action_next(self) -> None:
         if self.current > LAST_BUILT:
@@ -250,7 +254,8 @@ class StepwiseApp(App):
         if not preview.display:
             return
         here = self.pages[self.page]
-        focus = {"answer": here.key, "list": f"list:{here.key}", "code": f"code:{here.key}:{here.item}"}.get(here.kind)
+        focus = {"answer": here.key, "list": f"list:{here.key}", "code": f"code:{here.key}:{here.item}",
+                 "deps": "deps"}.get(here.kind)
         live = {field.key: field.text for field in self.answer_fields()}
         markdown = self.query_one("#preview-md", Markdown)
         await markdown.update(draft(self.project, live, focus))
@@ -299,7 +304,7 @@ class StepwiseApp(App):
             widgets.append(Static(p.answer("intent"), classes="quote", markup=False))
             widgets.append(StepEditor(p, "steps", "Your steps"))
         elif page.kind == "list":
-            title = {"files": "Your files", "prereqs": "Your prerequisites", "tests": "Your tests"}[page.key]
+            title = {"files": "Your files", "tests": "Your tests"}[page.key]
             widgets.append(StepEditor(p, page.key, title))
         elif page.kind == "info":
             widgets.append(Markdown(PSEUDO_PRIMER if page.key == "pseudo" else TEST_PRIMER, classes="primer"))
@@ -307,6 +312,8 @@ class StepwiseApp(App):
             widgets.append(Button("Open the article", id="open-article"))
         elif page.kind == "code":
             widgets.append(CodePanel(p, page.key, page.item))
+        elif page.kind == "deps":
+            widgets.append(DependencyPanel(p))
         elif page.kind == "check":
             widgets.append(CheckPanel(p))
         elif page.kind == "run":

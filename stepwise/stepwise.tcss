@@ -183,7 +183,7 @@ NameScreen {
     color: $text-muted;
 }
 
-#file-view {
+#file-view, .deps-view {
     height: auto;
     min-height: 5;
     max-height: 18;

@@ -84,12 +84,6 @@ FILES_QUESTION = (
     "file when it starts doing a second job, gets hard to read, or has code you'd want to use somewhere else. "
     "One per line: the file name, a colon, and what it's for, like tip.py: works out the tip"
 )
-PREREQS_QUESTION = (
-    "What does someone need to install before your app will run? One per line. Start with the language and "
-    "its version, like Python 3.14. Then each library you had to install, and what it's for, like "
-    "PySide6: draws the window. Only list what you installed yourself: things that come with the language "
-    "(like sys) and parts of a library (like QtCore, which comes inside PySide6) don't need their own line."
-)
 TESTS_QUESTION = "What should you test? One thing per line, in plain words, like: the tip is 0 when the total is 0"
 
 RUN_FAILED = "It didn't run. Read the error above. In your own words, what went wrong, and which step's code is it in?"
@@ -134,6 +128,7 @@ class Question:
     section: str = ""   # README section; empty means the answer isn't part of the README
     heading: str = ""   # subheading in the README; empty means the answer is the section's text
     code: bool = False  # shown as a code block in the README, for commands
+    line: bool = False  # answered on one line, like a version or a command
 
 
 QUESTIONS: dict[int, list[Question]] = {
@@ -163,6 +158,8 @@ QUESTIONS: dict[int, list[Question]] = {
                  "Tech stack", "Built with"),
         Question("stack.tools", "What will you write, run and debug it with? Your editor, runtime and package manager.",
                  "Development"),
+        Question("lang.version", "Which version of your language does the app need? Like: Python 3.14",
+                 "Prerequisites", line=True),
         Question("setup.steps", "How does someone get those installed? Write the steps you'd give a friend: making a "
                  "virtual environment, installing the libraries, anything else. Stepwise won't run these.",
                  "Prerequisites", "Setting it up"),

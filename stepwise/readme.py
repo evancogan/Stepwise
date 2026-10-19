@@ -4,6 +4,8 @@ Stepwise only supplies the headings that frame each answer."""
 import re
 from collections.abc import Mapping
 
+from .languages import detect
+from .prereqs import dependency_file
 from .stages import PART_TWO_SECTIONS, QUESTIONS, SECTIONS
 from .store import Project
 
@@ -66,13 +68,20 @@ def draft(project: Project, live: Mapping[str, str] | None = None, here: str | N
                 lines.append(f"- `{test_file}`: the tests")
             structure = "\n".join(lines)
             body.append(highlight(structure) if here == "list:files" else structure)
-        if section == "Prerequisites" and (needs := project.prereqs()):
-            listing = "\n".join(f"- {name}" + (f": {purpose}" if purpose else "") for name, purpose in needs)
-            body.append(highlight(listing) if here == "list:prereqs" else listing)
+        if section == "Prerequisites":
+            lines = [f"- {version}"] if (version := text("lang.version")) else []
+            libraries = []
+            for lang in detect(project):
+                file_name, deps, _ = dependency_file(project, lang)
+                if deps:
+                    libraries.append(f"- Libraries, from `{file_name}`: " + ", ".join(deps))
+            lines += [highlight(line) for line in libraries] if here == "deps" else libraries
+            if lines:
+                body.append("\n".join(lines))
         if section == "Testing" and tests:
             done = [bool(project.answer(f"test{n}.done")) for n in range(1, len(tests) + 1)]
             body.append(checklist(tests, done, list_here("tests")))
-        for q in (q for q in questions if q.section == section):
+        for q in (q for q in questions if q.section == section and q.key != "lang.version"):
             if answer := text(q.key):
                 if q.code and q.key != here:  # a highlight inside a code block would show as literal **
                     answer = f"```\n{answer}\n```"

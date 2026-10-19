@@ -27,7 +27,6 @@ META = ".stepwise"
 ITEM_KEYS = {
     "steps": ["pseudo{n}", "code{n}.file", "code{n}.done", "code{n}.stuck"],
     "files": [],
-    "prereqs": [],
     "tests": ["test{n}.pseudo", "test{n}.done", "test{n}.stuck"],
 }
 
@@ -162,8 +161,8 @@ class Project:
         if name == "files":
             for file_name, _ in self.files():
                 self.create_file(file_name)
-        if name in ("files", "prereqs"):
-            self.set("prereq_check", "")  # what's installed or imported may no longer match
+        if name == "files":
+            self.set("prereq_check", "")  # the languages and imports to check may have changed
         self.write_notes()
 
     def steps(self) -> list[str]:
@@ -175,10 +174,6 @@ class Project:
     def files(self) -> list[tuple[str, str]]:
         """The app's files as (name, purpose)."""
         return [parse_file_line(line) for line in self.items("files")]
-
-    def prereqs(self) -> list[tuple[str, str]]:
-        """What the app needs installed, as (name, purpose): a language line, then import names."""
-        return [parse_file_line(line) for line in self.items("prereqs")]
 
     def pseudo(self) -> list[str]:
         return [self.answer(f"pseudo{n}") for n in range(1, len(self.steps()) + 1)]
@@ -299,8 +294,6 @@ class Project:
                         parts.append(f"**Step {n}: {step}**\n\n```\n{text}\n```\n")
             if stage == 4 and self.items("files"):
                 parts.append("**Files**\n\n" + "".join(f"- {f}\n" for f in self.items("files")))
-            if stage == 4 and self.items("prereqs"):
-                parts.append("**Prerequisites**\n\n" + "".join(f"- {r}\n" for r in self.items("prereqs")))
             if stage == 5:
                 for n, step in enumerate(steps, 1):
                     if file := self.step_file(n):
