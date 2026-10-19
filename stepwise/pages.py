@@ -99,14 +99,22 @@ def pages(project: Project, stage: int) -> list[Page]:
             question("review.again"), Page("part2", label="README Part Two")]
 
 
+def page_done(project: Project, page: Page) -> bool:
+    """Whether the sidebar ticks this page. The research page has no input of its own, so it follows the links."""
+    if page.kind == "research":
+        return bool(project.items("resources"))
+    return not page_missing(project, page)
+
+
 def page_missing(project: Project, page: Page) -> str:
     """What's left to do on this page, or an empty string."""
     if page.kind == "empty":
         return page.note
     if page.kind == "answer" and not project.answer(page.key):
         return "Answer this one before moving on."
-    if page.kind == "list" and page.key != "resources" and not project.items(page.key):
-        return {"steps": "Add at least one step before moving on.",
+    if page.kind == "list" and not project.items(page.key):
+        return {"resources": "Add at least one link from your research before moving on.",
+                "steps": "Add at least one step before moving on.",
                 "files": "List at least one file before moving on.",
                 "tests": "Add at least one test before moving on."}[page.key]
     if page.kind == "answer" and page.line and "\n" in project.answer(page.key):

@@ -1,0 +1,6 @@
+{"t": "2026-10-19T10:54:39", "event": "open", "stage": 1}
+{"t": "2026-10-19T10:54:39", "event": "view", "stage": 1, "page": "intent", "item": null, "ahead": null}
+{"t": "2026-10-19T10:54:49", "event": "answer", "key": "intent", "seconds": 9.7, "changed": false, "chars": 0, "lines": 0}
+{"t": "2026-10-19T10:54:49", "event": "view", "stage": 1, "page": "research", "item": null, "ahead": null}
+{"t": "2026-10-19T10:54:52", "event": "view", "stage": 1, "page": "resources", "item": null, "ahead": null}
+{"t": "2026-10-19T10:54:54", "event": "view", "stage": 1, "page": "research", "item": null, "ahead": null}

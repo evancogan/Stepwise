@@ -18,7 +18,7 @@ from textual.widgets.option_list import Option
 
 from .answer import AnswerArea, AnswerLine, SavesAnswer
 from .coding import CodePanel
-from .pages import Page, page_missing, pages
+from .pages import Page, page_done, page_missing, pages
 from .prereqs import CheckPanel, DependencyPanel
 from .readme import draft, part_two
 from .runner import RunPanel
@@ -236,7 +236,7 @@ class StepwiseApp(App):
             if i != self.current:
                 continue
             for n, page in enumerate(self.pages):
-                tick = "□" if page_missing(self.project, page) else "✓"
+                tick = "✓" if page_done(self.project, page) else "□"
                 label = page.label if len(page.label) <= 24 else page.label[:23].rstrip() + "…"
                 style = "bold" if n == self.page else "dim" if tick == "✓" or i > reached else ""
                 if n == self.page:
