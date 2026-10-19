@@ -1,1 +1,1 @@
-getting the user experience right is harder than this, as the logical operation is one line
+Getting the user experience right is perhaps the hardest part, everything else is an easy line of code

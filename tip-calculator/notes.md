@@ -93,7 +93,7 @@ There is not enough data for a logical operation to output a new number
 
 **Which step was hardest to describe in plain words, and what made it hard?**
 
-getting the user experience right is harder than this, as the logical operation is one line
+Getting the user experience right is perhaps the hardest part, everything else is an easy line of code
 
 ## 4. README Part One
 

@@ -3,7 +3,6 @@ import re
 import shutil
 import subprocess
 import time
-from dataclasses import dataclass
 from pathlib import Path
 
 from rich.text import Text
@@ -13,105 +12,31 @@ from textual.binding import Binding
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import Screen
 from textual.widget import Widget
-from textual.widgets import Button, Footer, Input, Label, Markdown, OptionList, Static, TextArea
+from textual.widgets import Button, Footer, Input, Label, Markdown, OptionList, Static
 from textual.widgets.option_list import Option
 
-from .readme import STEPS, draft
-from .stages import INTENT_QUESTION, INTROS, LAST_BUILT, PSEUDO_HINT, QUESTIONS, TITLES
+from .answer import AnswerArea
+from .coding import CodePanel
+from .pages import Page, page_missing, pages
+from .readme import draft, part_two
+from .runner import RunPanel
+from .stages import INTROS, LAST_BUILT, PSEUDO_PRIMER, PSEUDO_WORDS, PSEUDOCODE_URL, TEST_PRIMER, TITLES
 from .steps import StepEditor
 from .store import Project, slugify
 
 TOTAL = len(TITLES)
-SAVE_AFTER_IDLE = 5.0  # seconds without typing before an answer is written to disk
 PREVIEW_AFTER_IDLE = 0.3  # seconds; the preview is in memory, so it can follow typing closely
-
-
-@dataclass(frozen=True)
-class Page:
-    """One screen within a stage. Each holds a single thing to do, so no page is a wall of fields."""
-    kind: str  # "answer", "steps", "readme" or "done"
-    key: str = ""
-    prompt: str = ""
-    section: str = ""
-    placeholder: str = ""
-    label: str = ""  # short name for the sidebar checklist
-
-
-def pages(project: Project, stage: int) -> list[Page]:
-    if stage > LAST_BUILT:
-        return [Page("done")]
-    questions = [Page("answer", q.key, q.prompt, q.section, label=q.heading or q.section) for q in QUESTIONS[stage]]
-    if stage == 1:
-        return [Page("answer", "intent", INTENT_QUESTION, "the opening line", label="Description"), *questions]
-    if stage == 2:
-        return [Page("steps", label="Your steps"), *questions]
-    if stage == 3:
-        steps = project.steps()
-        return [Page("answer", f"pseudo{n}", f"Step {n} of {len(steps)}: {step}", placeholder=PSEUDO_HINT,
-                     label=f"Step {n}: {step}")
-                for n, step in enumerate(steps, 1)] + questions
-    return [*questions, Page("readme", label="README draft")]
-
-
-def page_missing(project: Project, page: Page) -> str:
-    """What's left to do on this page, or an empty string."""
-    if page.kind == "answer" and not project.answer(page.key):
-        return "Answer this one before moving on."
-    if page.kind == "steps" and not project.steps():
-        return "Add at least one step before moving on."
-    if page.kind == "readme" and not project.readme.is_file():
-        return "Build your README draft before moving on."
-    if page.kind == "readme" and project.readme_is_draft():
-        return "Edit your README draft and save it before moving on."
-    return ""
 
 
 def anchor(heading: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", heading.lower()).strip("-")
 
 
-class AnswerArea(TextArea):
-    """A multi-line answer, saved to the project under `key` once the user pauses typing."""
-
-    def __init__(self, key: str, text: str, placeholder: str = ""):
-        super().__init__(text, soft_wrap=True, tab_behavior="focus", classes="answer", placeholder=placeholder)
-        self.key = key
-        self._focused_at = 0.0
-        self._text_at_focus = text
-        self._saved = text
-        self._save_timer = None
-
-    def on_text_area_changed(self, event: TextArea.Changed) -> None:
-        if self._save_timer:
-            self._save_timer.stop()
-        if self.text != self._saved:
-            self._save_timer = self.set_timer(SAVE_AFTER_IDLE, self.save)
-        self.app.schedule_preview()
-
-    def save(self) -> bool:
-        """Writes the answer if it changed since the last save. Returns whether it wrote."""
-        if self._save_timer:
-            self._save_timer.stop()
-            self._save_timer = None
-        if self.text == self._saved:
-            return False
-        self.app.project.set_answer(self.key, self.text)
-        self._saved = self.text
-        self.app.refresh_sidebar()
-        return True
-
-    def on_focus(self) -> None:
-        self._focused_at = time.monotonic()
-        self._text_at_focus = self.text
-
-    def on_blur(self) -> None:
-        if self.save():
-            self.app.project.write_notes()
-        seconds = round(time.monotonic() - self._focused_at, 1)
-        changed = self.text != self._text_at_focus
-        if changed or seconds >= 1:
-            self.app.project.log("answer", key=self.key, seconds=seconds, changed=changed,
-                                 chars=len(self.text.strip()), lines=len(self.text.strip().splitlines()))
+def open_in_code(project: Project, path: Path, what: str) -> None:
+    code = shutil.which("code")
+    if code and path.exists():
+        project.log("readme", action="open_editor", file=path.name, what=what)
+        subprocess.Popen([code, str(path)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
 class NameScreen(Screen):
@@ -185,7 +110,7 @@ class StepwiseApp(App):
         self.current = stage
         self.page = max(0, min(page, len(self.pages) - 1))
         here = self.pages[self.page]
-        self.project.log("view", stage=stage, page=here.key or here.kind)
+        self.project.log("view", stage=stage, page=here.key or here.kind, item=here.item or None)
         self.refresh_chrome()
         container = self.query_one("#stage", VerticalScroll)
         await container.remove_children()
@@ -195,21 +120,26 @@ class StepwiseApp(App):
             field.focus()
         self.schedule_preview()
 
+    async def go_to_files(self) -> None:
+        stage_four = pages(self.project, 4)
+        await self.go(4, next(i for i, p in enumerate(stage_four) if p.kind == "list" and p.key == "files"))
+
     async def action_next(self) -> None:
         if self.current > LAST_BUILT:
             return
         self.save_all()
-        if problem := page_missing(self.project, self.pages[self.page]):
-            self.project.log("blocked", stage=self.current, page=self.pages[self.page].key or self.pages[self.page].kind)
+        here = self.pages[self.page]
+        if problem := page_missing(self.project, here):
+            self.project.log("blocked", stage=self.current, page=here.key or here.kind, reason=problem)
             self.notify(problem, severity="warning", timeout=5)
             return
         if self.page < len(self.pages) - 1:
             await self.go(self.current, self.page + 1)
             return
         # Pages can be skipped through the sidebar, so the whole stage is checked before leaving it.
-        if missing := self.project.missing(self.current):
+        if missing := [p.label for p in self.pages if page_missing(self.project, p)]:
             self.project.log("blocked", stage=self.current, missing=missing)
-            self.notify("Before moving on, fill in: " + ", ".join(missing) + ".",
+            self.notify("Before moving on, finish: " + ", ".join(missing) + ".",
                         title="Not done yet", severity="warning", timeout=8)
             await self.go(self.current, self.first_open_page(self.current))
             return
@@ -233,6 +163,11 @@ class StepwiseApp(App):
     async def back_pressed(self) -> None:
         await self.action_back()
 
+    @on(Button.Pressed, "#open-article")
+    def open_article(self) -> None:
+        self.project.log("open_article", url=PSEUDOCODE_URL)
+        self.open_url(PSEUDOCODE_URL)
+
     @on(OptionList.OptionSelected, "#sidebar")
     async def jump(self, event: OptionList.OptionSelected) -> None:
         kind, _, target = event.option.id.partition(":")
@@ -251,9 +186,12 @@ class StepwiseApp(App):
             else "[dim]□[/]"
             for i in range(1, TOTAL + 1)
         )
-        where = f"Stage {self.current} of {TOTAL}"
-        if len(self.pages) > 1:
-            where += f" · {self.page + 1} of {len(self.pages)}"
+        if self.current > TOTAL:
+            where = "All ten stages done"
+        else:
+            where = f"Stage {self.current} of {TOTAL}"
+            if len(self.pages) > 1:
+                where += f" · {self.page + 1} of {len(self.pages)}"
         self.query_one("#topbar", Static).update(f"[b]Stepwise[/b] · {self.project.name}    {bar}  {where}")
         self.refresh_sidebar()
 
@@ -265,8 +203,8 @@ class StepwiseApp(App):
         highlight = 0
         for i, title in enumerate(TITLES, 1):
             mark = "✓" if i < reached else "›" if i == self.current else " "
-            sidebar.add_option(Option(f"{mark} {i}. {title}", id=f"stage:{i}", disabled=i > reached or i > LAST_BUILT))
-            if i != self.current or i > LAST_BUILT:
+            sidebar.add_option(Option(f"{mark} {i}. {title}", id=f"stage:{i}", disabled=i > reached))
+            if i != self.current:
                 continue
             for n, page in enumerate(self.pages):
                 tick = "□" if page_missing(self.project, page) else "✓"
@@ -275,7 +213,7 @@ class StepwiseApp(App):
                 if n == self.page:
                     highlight = sidebar.option_count
                 sidebar.add_option(Option(Text(f"    {tick} {label}", style=style), id=f"page:{i},{n}"))
-        sidebar.highlighted = highlight or self.current - 1
+        sidebar.highlighted = highlight or min(self.current, TOTAL) - 1
 
     # --- saving --------------------------------------------------------
 
@@ -307,14 +245,13 @@ class StepwiseApp(App):
         if not preview.display:
             return
         here = self.pages[self.page]
+        focus = {"answer": here.key, "list": f"list:{here.key}", "code": f"code:{here.key}:{here.item}"}.get(here.kind)
         live = {area.key: area.text for area in self.query(AnswerArea)}
         markdown = self.query_one("#preview-md", Markdown)
-        focus = {"answer": here.key, "steps": STEPS}.get(here.kind)
         await markdown.update(draft(self.project, live, focus))
         # Keep the part of the README this page writes in view.
-        section = {"steps": "Build plan"}.get(here.kind, here.section)
-        if section and section != "the opening line":
-            markdown.goto_anchor(anchor(section))
+        if here.section and here.section != "the opening line":
+            markdown.goto_anchor(anchor(here.section))
         else:
             preview.scroll_home(animate=False)
 
@@ -322,28 +259,56 @@ class StepwiseApp(App):
 
     def page_widgets(self, page: Page) -> list[Widget]:
         p, n = self.project, self.current
-        widgets: list[Widget] = [Label(f"{n}. {TITLES[n - 1]}", classes="stage-title")]
         if page.kind == "done":
-            return widgets + [
-                Static(f"Stages 1 to {LAST_BUILT} are done. You have a plan, pseudo-code, a stack "
-                       "and a README draft, all in your own words.", classes="intro"),
-                Static(f"Stage {n} isn't in Stepwise yet. Your files are in:\n\n  {p.root}", classes="intro"),
+            return [
+                Label("You built it.", classes="stage-title"),
+                Static(f"All ten stages are done. {p.name} has a plan, code you wrote yourself, tests, and a "
+                       "README in your own words.", classes="intro"),
+                Static(f"Everything is in:\n\n  {p.root}", classes="intro"),
+                Static("Your notes from every stage are in notes.md.", classes="hint"),
             ]
+        widgets: list[Widget] = [Label(f"{n}. {TITLES[n - 1]}", classes="stage-title")]
         if self.page == 0:
             widgets.append(Static(INTROS[n], classes="intro"))
         if n == 1 and self.page == 0:
             widgets.append(Static("Answers save when you pause typing. Each one becomes part of your app's "
                                   "README; the preview on the right shows where.", classes="hint"))
-        if page.kind == "answer":
+        if page.note:
+            widgets.append(Label(page.note, classes="section"))
+        if page.prompt:
             widgets.append(Label(page.prompt, classes="question"))
-            if page.section:
-                widgets.append(Static(f"→ README · {page.section}", classes="tag"))
+        if page.section and page.kind in ("answer", "list", "code"):
+            widgets.append(Static(f"→ README · {page.section}", classes="tag"))
+
+        if page.kind == "answer":
             widgets.append(AnswerArea(page.key, p.answer(page.key), page.placeholder))
-        elif page.kind == "steps":
-            widgets.append(Static(p.answer("intent"), classes="quote"))
-            widgets.append(StepEditor(p))
+            if page.key.startswith("pseudo") and page.key[6:].isdigit():
+                widgets.append(Static(f"Pseudocode words: {PSEUDO_WORDS}", classes="hint"))
+            if page.key == "review.hardest" and (notes := p.reminders()):
+                widgets.append(Label("Your notes from building it:", classes="minor"))
+                widgets.append(Static("\n".join(f"• {note}" for note in notes), classes="quote", markup=False))
+        elif page.kind == "list" and page.key == "steps":
+            widgets.append(Static(p.answer("intent"), classes="quote", markup=False))
+            widgets.append(StepEditor(p, "steps", "Your steps"))
+        elif page.kind == "list":
+            title = "Your files" if page.key == "files" else "Your tests"
+            widgets.append(StepEditor(p, page.key, title))
+        elif page.kind == "info":
+            widgets.append(Markdown(PSEUDO_PRIMER if page.key == "pseudo" else TEST_PRIMER, classes="primer"))
+            widgets.append(Static(PSEUDOCODE_URL, classes="hint", markup=False))
+            widgets.append(Button("Open the article", id="open-article"))
+        elif page.kind == "code":
+            widgets.append(CodePanel(p, page.key, page.item))
+        elif page.kind == "run":
+            if page.key == "app":
+                widgets.append(Static("If your app opens a window or keeps running, press Stop once you've "
+                                      "seen it work.", classes="hint"))
+            widgets.append(RunPanel(p, page.key))
         elif page.kind == "readme":
             widgets.append(ReadmePanel(p))
+        elif page.kind == "part2":
+            widgets.append(PartTwoPanel(p))
+
         back = Button("‹ Back", id="back", disabled=n == 1 and self.page == 0)
         back.can_focus = False  # so Tab from an answer lands on Next, and Tab, Enter moves forward
         widgets.append(Horizontal(back, Button("Next ›", id="next", variant="primary"), id="nav"))
@@ -354,7 +319,7 @@ class ReadmePanel(Vertical):
     """Stage 4's last page: build the README draft from the answers, then make it yours."""
 
     def __init__(self, project: Project):
-        super().__init__(id="readme-panel")
+        super().__init__(classes="readme-panel")
         self.project = project
 
     def compose(self) -> ComposeResult:
@@ -362,7 +327,7 @@ class ReadmePanel(Vertical):
         yield Static("Build a draft from everything you've answered so far, then open it and make it read "
                      "well: fix the flow, cut what's repeated, add what's missing. Stepwise won't move on "
                      "until you've edited it.", classes="intro")
-        with Horizontal(id="readme-buttons"):
+        with Horizontal(classes="readme-buttons"):
             yield Button("Build README draft", id="build-draft", variant="primary")
             if shutil.which("code"):
                 yield Button("Open in VS Code", id="open-code")
@@ -393,15 +358,65 @@ class ReadmePanel(Vertical):
             self.app.notify(f"You've already edited README.md, so the new draft went to {target.name}.",
                             timeout=8)
         self.check()
-        self.open_code(target)
+        self.app.refresh_sidebar()
+        open_in_code(self.project, target, "draft")
 
     @on(Button.Pressed, "#open-code")
-    def open_code(self, target: Path | None = None) -> None:
-        code = shutil.which("code")
-        path = target if isinstance(target, Path) else self.project.readme
-        if code and path.exists():
-            self.project.log("readme", action="open_editor", file=path.name)
-            subprocess.Popen([code, str(path)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    def open_code(self) -> None:
+        open_in_code(self.project, self.project.readme, "readme")
+
+
+class PartTwoPanel(Vertical):
+    """Stage 10's last page: add the sections that only exist now the app is built."""
+
+    def __init__(self, project: Project):
+        super().__init__(classes="readme-panel")
+        self.project = project
+
+    def compose(self) -> ComposeResult:
+        yield Label("Now finish your README with Part Two.", classes="question")
+        yield Static("This adds the sections your app has earned since Part One (how it's laid out, how to run "
+                     "it, what's known to break, the tests, and what you learned) to the end of README.md. "
+                     "Nothing you've already written is changed.", classes="intro")
+        yield Static("If a stranger read your README, what would they still have to guess? Fix that, then save.",
+                     classes="hint")
+        with Horizontal(classes="readme-buttons"):
+            yield Button("Add Part Two to README", id="add-part-two", variant="primary")
+            if shutil.which("code"):
+                yield Button("Open in VS Code", id="open-code")
+        yield Static(str(self.project.readme), classes="hint")
+        yield Static(id="readme-status")
+
+    def on_mount(self) -> None:
+        self.check()
+        self.set_interval(1.5, self.check)
+
+    def check(self) -> None:
+        p = self.project
+        if p.part_two_written():
+            status = "[green]✓ README.md has Part Two and your edits in it.[/]"
+        elif p.part_two_added():
+            status = "[yellow]Part Two is added but untouched. Edit it and save.[/]"
+        else:
+            status = "[dim]Part Two isn't in your README yet.[/]"
+        self.query_one("#readme-status", Static).update(status)
+
+    @on(Button.Pressed, "#add-part-two")
+    def add(self) -> None:
+        self.app.save_all()
+        text = part_two(self.project)
+        self.project.append_part_two(text)
+        self.project.log("readme", action="part_two", added=bool(text.strip()))
+        if not text.strip():
+            self.app.notify("Your README already has every Part Two section. Read it through and save.",
+                            timeout=8)
+        self.check()
+        self.app.refresh_sidebar()
+        open_in_code(self.project, self.project.readme, "part_two")
+
+    @on(Button.Pressed, "#open-code")
+    def open_code(self) -> None:
+        open_in_code(self.project, self.project.readme, "readme")
 
 
 def main() -> None:

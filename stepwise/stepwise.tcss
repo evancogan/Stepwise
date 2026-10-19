@@ -89,13 +89,23 @@ Label {
     background: $accent 15%;
 }
 
+/* Textual underlines level-2 headings but not level-3, which looked random. Sections are
+   bold and subheadings plain instead, with no underlines anywhere. */
+#preview-md MarkdownH2 {
+    text-style: bold;
+}
+
+#preview-md MarkdownH3 {
+    text-style: none;
+}
+
 #preview-title {
     color: $text-muted;
     text-style: italic;
     padding: 1 0 0 1;
 }
 
-#readme-buttons {
+.readme-buttons {
     height: auto;
 }
 
@@ -121,11 +131,11 @@ Label {
     margin-top: 1;
 }
 
-#readme-panel {
+.readme-panel {
     height: auto;
 }
 
-#readme-panel Button {
+.readme-panel Button {
     margin: 1 1 1 0;
 }
 
@@ -145,4 +155,65 @@ NameScreen {
     text-style: bold;
     color: $accent;
     margin-bottom: 1;
+}
+
+.minor {
+    color: $text-muted;
+    margin-top: 1;
+}
+
+.primer {
+    height: auto;
+    margin: 0 0 1 0;
+    padding: 0;
+}
+
+.file-pick, .file-bar, .run-buttons {
+    height: auto;
+    margin-top: 1;
+}
+
+.file-pick Select {
+    width: 1fr;
+    margin-right: 1;
+}
+
+.file-bar Static {
+    padding: 1 0 0 1;
+    color: $text-muted;
+}
+
+#file-view {
+    height: auto;
+    min-height: 5;
+    max-height: 18;
+    margin-top: 1;
+}
+
+#done {
+    margin-top: 1;
+}
+
+.command {
+    background: $panel;
+    padding: 0 1;
+    margin-top: 1;
+}
+
+.run-buttons Button {
+    margin-right: 1;
+}
+
+#output {
+    height: 14;
+    margin-top: 1;
+    border: round $panel-lighten-2;
+}
+
+#run-status {
+    margin-top: 1;
+}
+
+#branch {
+    height: auto;
 }

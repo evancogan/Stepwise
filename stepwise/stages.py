@@ -21,28 +21,100 @@ TITLES = [
     "Review and README Part Two",
 ]
 
-LAST_BUILT = 4
+LAST_BUILT = len(TITLES)
 
 INTROS = {
     1: "You came here with an app in mind. Pin it down before you build anything.",
     2: "Break your app into steps, in the order you'll build them. Each step should end in something you can run or see.",
     3: "For each step, write how it works in plain words: the logic, not the code.",
     4: "Before any code, decide what you're building it with. Research the choices you're unsure of.",
+    5: "Now write the real code, one step at a time, in your editor. Stepwise shows the file beside your pseudo-code as you save it.",
+    6: "Time to run it. Stepwise runs your app and shows you what your terminal says.",
+    7: "Decide what to test: the things that would hurt most if they quietly broke.",
+    8: "Write each test in plain words first, the same way you wrote your steps.",
+    9: "Now write the tests for real, then let Stepwise run them.",
+    10: "Look back at what you built, then finish your README.",
 }
 
 INTENT_QUESTION = "Describe your app in a sentence or two. Who is it for, and what does it do for them?"
-PSEUDO_HINT = "What does this step check, and what does it change?"
 
-# README sections in the order they appear. "Build plan" is the step list itself.
+PSEUDOCODE_URL = "https://en.wikipedia.org/wiki/Pseudocode"
+PSEUDO_WORDS = "ASK · SHOW · SET · IF / OTHERWISE · REPEAT · FOR EACH · STOP"
+PSEUDO_PLACEHOLDER = "ASK…, IF…, SHOW…"
+TEST_PLACEHOLDER = "GIVEN…, WHEN…, THEN…"
+
+PSEUDO_PRIMER = f"""\
+Pseudocode is your program written in plain words. No syntax to get right, and no computer will run it. \
+It's for you: once the logic reads right in words, turning it into code is mostly translation.
+
+There's no single standard. Some people write it like Python, some like maths, some in full sentences. \
+Stepwise uses plain sentences with a few capital-letter words for the structure:
+
+```
+ASK the user for the total
+IF the total is empty
+    SHOW "Enter a total"
+OTHERWISE
+    SET the tip to total × percentage
+    SHOW the tip
+```
+
+One line per action. Indent whatever belongs inside an IF or a REPEAT. The words to lean on: {PSEUDO_WORDS}.
+
+Want more? Wikipedia compares the common styles:
+"""
+
+TEST_PRIMER = f"""\
+A test is a small promise about your app, checked by code. Write each one in plain words first, \
+using three capital-letter words: what's true before, what happens, and what should be true after.
+
+```
+GIVEN the total is 0
+WHEN the tip is worked out
+THEN the tip is 0
+```
+
+It's the same kind of pseudocode as your steps, so the same words still work inside it: {PSEUDO_WORDS}.
+
+Want more? Wikipedia compares the common pseudocode styles:
+"""
+
+FILES_QUESTION = (
+    "What files will your app need? Start with one; most small apps only need one or two. Give a part its own "
+    "file when it starts doing a second job, gets hard to read, or has code you'd want to use somewhere else. "
+    "One per line: the file name, a colon, and what it's for, like tip.py: works out the tip"
+)
+TESTS_QUESTION = "What should you test? One thing per line, in plain words, like: the tip is 0 when the total is 0"
+
+RUN_FAILED = "It didn't run. Read the error above. In your own words, what went wrong, and which step's code is it in?"
+TESTS_FAILED = "Some tests failed. Which one, and is the test wrong or the app?"
+
+# README sections in the order they appear. Build plan, Project structure and Testing are built
+# from lists (steps, files, tests) as well as answers.
 SECTIONS = [
     "About",
     "Why I built this",
     "Build plan",
     "How it works",
+    "Project structure",
+    "Getting started",
     "Tech stack",
     "Development",
+    "Status",
+    "Known issues",
+    "Testing",
     "Challenges and what I learned",
     "Roadmap",
+]
+
+# Sections that only exist once the app is built; README Part Two appends whichever are missing.
+PART_TWO_SECTIONS = [
+    "Project structure",
+    "Getting started",
+    "Status",
+    "Known issues",
+    "Testing",
+    "Challenges and what I learned",
 ]
 
 
@@ -50,8 +122,9 @@ SECTIONS = [
 class Question:
     key: str
     prompt: str
-    section: str
-    heading: str = ""  # subheading in the README; empty means the answer is the section's text
+    section: str = ""   # README section; empty means the answer isn't part of the README
+    heading: str = ""   # subheading in the README; empty means the answer is the section's text
+    code: bool = False  # shown as a code block in the README, for commands
 
 
 QUESTIONS: dict[int, list[Question]] = {
@@ -65,8 +138,6 @@ QUESTIONS: dict[int, list[Question]] = {
         Question("steps.walk", "Walk through your app once more using your steps. Describe the flow from start to finish. "
                  "If a moment isn't covered by any step, go back and add one.",
                  "How it works"),
-        Question("steps.critical", "Which step does everything else depend on, and why?",
-                 "Challenges and what I learned", "The step everything depends on"),
         Question("steps.later", "Once the first version works, what would you add next?",
                  "Roadmap"),
     ],
@@ -75,8 +146,6 @@ QUESTIONS: dict[int, list[Question]] = {
                  "How it works", "What it keeps track of"),
         Question("pseudo.input", "What does the user give your app, and what should happen if it's missing or wrong?",
                  "How it works", "Input"),
-        Question("pseudo.hardest", "Which step was hardest to describe in plain words, and what made it hard?",
-                 "Challenges and what I learned", "The hardest step to describe"),
     ],
     4: [
         Question("stack.runs", "Where will people use your app: in a browser, on a phone, on a desktop, or in a terminal?",
@@ -85,7 +154,32 @@ QUESTIONS: dict[int, list[Question]] = {
                  "Tech stack", "Built with"),
         Question("stack.tools", "What will you write, run and debug it with? Your editor, runtime and package manager.",
                  "Development"),
-        Question("stack.unsure", "Which of these choices are you least sure about, and how could you test it quickly?",
-                 "Challenges and what I learned", "The choice I'm least sure about"),
+    ],
+    6: [
+        Question("run.command", "How do you start your app? Type it the way you would in a terminal, like: python main.py",
+                 "Getting started", "Running it", code=True),
+        Question("run.result", "It ran! What did you see, and how does it compare to what you described back in stage 1?",
+                 "Status"),
+        Question("run.limits", "Try to break it: leave something blank, type something wrong, use a huge number. What happens?",
+                 "Known issues"),
+        Question("run.diff", "Where did your code end up different from your pseudo-code?",
+                 "How it works", "Changes from the plan"),
+    ],
+    9: [
+        Question("tests.file", "What file will your tests live in? Something like: test_tip.py"),
+        Question("tests.command", "How do you run your tests? Something like: python -m pytest",
+                 "Testing", "Running the tests", code=True),
+    ],
+    10: [
+        Question("review.critical", "Which step did everything else depend on, and how did that play out?",
+                 "Challenges and what I learned", "The step everything depended on"),
+        Question("review.hardest", "Which part was hardest to build, and what made it hard?",
+                 "Challenges and what I learned", "The hardest part"),
+        Question("review.choice", "Which choice from stage 4 would you make differently now, and why?",
+                 "Challenges and what I learned", "What I'd choose differently"),
+        Question("review.again", "If you started this app over tomorrow, what would you do differently?",
+                 "Challenges and what I learned", "If I started over"),
     ],
 }
+
+QUESTION = {q.key: q for qs in QUESTIONS.values() for q in qs}
