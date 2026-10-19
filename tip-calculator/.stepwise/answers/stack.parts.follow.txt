@@ -1,1 +1,0 @@
-I chose this over tkinter because it's newer and I'm interested in learning its syntax.

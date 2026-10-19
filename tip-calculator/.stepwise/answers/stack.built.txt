@@ -1,7 +1,0 @@
-I chose pyqt6, because  pyqt6 has frameworks for the gui.
-
-I chose this over tkinter because it's newer and I'm interested in learning its syntax.
-
-It offers gui assistance in the form of pre-written frameworks
-
-PyQt6 is in python, but I don't know it yet, so it costs some learning time. The size will be limited to what python ends up needing to save.

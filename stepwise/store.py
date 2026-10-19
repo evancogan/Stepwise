@@ -32,6 +32,11 @@ ITEM_KEYS = {
 }
 
 
+def projects_dir() -> Path:
+    """Where new projects go: outside the Stepwise source, so launching from the repo never adds to it."""
+    return Path(os.environ.get("STEPWISE_HOME") or Path.home() / "Stepwise")
+
+
 def slugify(name: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-") or "app"
 

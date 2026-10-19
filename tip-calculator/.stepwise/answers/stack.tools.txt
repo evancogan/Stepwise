@@ -1,1 +1,0 @@
-The editor I'm using is vscode, running Python 3.14.7

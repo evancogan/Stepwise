@@ -1,5 +1,0 @@
-sys
-PySide6
-QtCore
-QtWidgets
-QtGui

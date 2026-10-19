@@ -1,1 +1,0 @@
-I'm building this to understand git better, as well as have something that I can use should anything happen to the ubiquitous version control app.

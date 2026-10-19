@@ -1,1 +1,0 @@
-I could try to look at the doc first and break it down into pseudocode

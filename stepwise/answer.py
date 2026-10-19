@@ -23,7 +23,7 @@ class SavesAnswer:
         if self._save_timer:
             self._save_timer.stop()
         if self.text != self._saved:
-            self._save_timer = self.set_timer(SAVE_AFTER_IDLE, self.save)
+            self._save_timer = self.set_timer(SAVE_AFTER_IDLE, self.save_and_note)
         self.app.schedule_preview()
 
     def save(self) -> bool:
@@ -38,13 +38,16 @@ class SavesAnswer:
         self.app.refresh_sidebar()
         return True
 
+    def save_and_note(self) -> None:
+        if self.save():
+            self.app.project.write_notes()
+
     def on_focus(self) -> None:
         self._focused_at = time.monotonic()
         self._text_at_focus = self.text
 
     def on_blur(self) -> None:
-        if self.save():
-            self.app.project.write_notes()
+        self.save_and_note()
         seconds = round(time.monotonic() - self._focused_at, 1)
         changed = self.text != self._text_at_focus
         if changed or seconds >= 1:

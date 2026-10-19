@@ -1,2 +1,0 @@
-ball hits brick]
-Brick disappears

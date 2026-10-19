@@ -1,8 +1,0 @@
-A game window is rendered
-A ball is rendered on screen
-A paddle is rendered on screen
-An array of bricks is rendered on screen
-A start button is rendered somewhere on the screen
-The start button pushes the ball towards the paddle, skewed a random direction
-The paddle can hit the ball and the ball bounces in the opposite direction on impact
-The ball hits the brick, and the brick disappears. A score is added

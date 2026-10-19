@@ -1,1 +1,0 @@
-the app would lose the smoothness of the ui, the friendliness in the experience, a slider/text box is more intuitive.

@@ -1,3 +1,0 @@
-The tip calculation logic, and the app opening at all, step 1.
-
-If the tip calculation logic is off, the whole app is considered imperfect, so that line of code is really important. The app not opening at all would also impede the user, so healthy builds and good commit habits are necessary prevention habits.

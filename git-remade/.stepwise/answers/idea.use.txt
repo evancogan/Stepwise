@@ -1,1 +1,0 @@
-This is a remake of the simple core of git, the distributive versioning system. It lets developers work on the same project without stepping on each other's toes.

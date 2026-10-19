@@ -1,1 +1,0 @@
-python tip-calculator.py

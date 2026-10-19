@@ -1,1 +1,0 @@
-A simple remake of git (version control)

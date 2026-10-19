@@ -1,1 +1,0 @@
-The user sees the gui, python handles the logic, and pyqt6 has frameworks for said gui

@@ -90,6 +90,7 @@ RESEARCH_PROMPT = (
     "Before you plan anything, see how others have built something like it. Search, read a few pages, and "
     "come back with what you found."
 )
+RESEARCH_NOTES_PROMPT = "Your notes: what did you learn? Anything that surprised you or changed your plan."
 RESOURCES_QUESTION = (
     "Which pages helped? Add each link, one at a time. They become your README's Further resources, and "
     "you can come back to them while you build."
@@ -120,6 +121,7 @@ SECTIONS = [
     "Testing",
     "Challenges and what I learned",
     "Roadmap",
+    "What I learned from research",
     "Further resources",
 ]
 
@@ -148,6 +150,7 @@ class Question:
 
 QUESTIONS: dict[int, list[Question]] = {
     1: [
+        Question("research.notes", RESEARCH_NOTES_PROMPT, "What I learned from research"),
         Question("idea.use", "Walk through using your app once, start to finish. What does the user see, and what do they do?",
                  "About"),
         Question("idea.why", "Why are you building this, and why build it yourself?",

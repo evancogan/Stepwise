@@ -1,6 +1,0 @@
-A screen displays a text field: "Enter total"
-A textbox is displayed underneath it
-Another text field pops up: "Tip Percentage"
-A slider with a number that rolls with it is shown below it
-The app calculates: total * tip percentage
-The app displays tip to give
