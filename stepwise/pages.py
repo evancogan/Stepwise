@@ -3,8 +3,8 @@
 from dataclasses import dataclass
 
 from .prereqs import deps_missing
-from .stages import (FILES_QUESTION, INTENT_QUESTION, LAST_BUILT, PSEUDO_PLACEHOLDER, QUESTION, TESTS_QUESTION,
-                     TEST_PLACEHOLDER)
+from .stages import (FILES_QUESTION, INTENT_QUESTION, LAST_BUILT, PSEUDO_PLACEHOLDER, QUESTION, RESEARCH_PROMPT,
+                     RESOURCES_QUESTION, TESTS_QUESTION, TEST_PLACEHOLDER)
 from .store import Project
 
 
@@ -12,7 +12,7 @@ from .store import Project
 class Page:
     """One screen within a stage. Each holds a single thing to do, so no page is a wall of fields.
 
-    kind: "answer", "list" (key is the list: steps, files or tests), "info" (key is the primer:
+    kind: "answer", "list" (key is the list: steps, files, tests or resources), "research" (the search button), "info" (key is the primer:
     pseudo or tests), "deps" (the dependency file), "code" (key is steps or tests, item is the
     position), "check" (the prerequisites check), "run" (key is app or tests), "readme", "part2",
     "empty" (stands in for pages that need steps or tests the user hasn't added yet) or "done".
@@ -59,7 +59,9 @@ def pages(project: Project, stage: int) -> list[Page]:
     steps, tests = project.steps(), project.tests()
     if stage == 1:
         return [Page("answer", "intent", INTENT_QUESTION, "the opening line", label="Description"),
-                question("idea.use"), question("idea.why")]
+                question("idea.use"), question("idea.why"),
+                Page("research", prompt=RESEARCH_PROMPT, label="Research"),
+                Page("list", "resources", RESOURCES_QUESTION, "Further resources", label="Your resources")]
     if stage == 2:
         return [Page("list", "steps", section="Build plan", label="Your steps"), question("steps.walk"), question("steps.later")]
     if stage == 3:
@@ -103,7 +105,7 @@ def page_missing(project: Project, page: Page) -> str:
         return page.note
     if page.kind == "answer" and not project.answer(page.key):
         return "Answer this one before moving on."
-    if page.kind == "list" and not project.items(page.key):
+    if page.kind == "list" and page.key != "resources" and not project.items(page.key):
         return {"steps": "Add at least one step before moving on.",
                 "files": "List at least one file before moving on.",
                 "tests": "Add at least one test before moving on."}[page.key]

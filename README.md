@@ -18,6 +18,8 @@ Questions:
 - If you could only ship one screen, what would be on that screen?
 - What's the one thing this app does that nothing else you've used does?
 
+   This stage ends with a research page: a button opens a Google search for "how to build" plus your idea, and you list the links that helped. They become the README's Further resources.
+
 
 2. **Step Breakdown**: The app then prompts you to break down your idea into smaller, manageable steps.
 Questions:

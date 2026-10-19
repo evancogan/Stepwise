@@ -86,7 +86,17 @@ FILES_QUESTION = (
 )
 TESTS_QUESTION = "What should you test? One thing per line, in plain words, like: the tip is 0 when the total is 0"
 
-RUN_FAILED = "It didn't run. Read the error above. In your own words, what went wrong, and which step's code is it in?"
+RESEARCH_PROMPT = (
+    "Before you plan anything, see how others have built something like it. Search, read a few pages, and "
+    "come back with what you found."
+)
+RESOURCES_QUESTION = (
+    "Which pages helped? Add each link, one at a time. They become your README's Further resources, and "
+    "you can come back to them while you build."
+)
+SEARCH_URL = "https://www.google.com/search?q="
+
+RUN_FAILED ="It didn't run. Read the error above. In your own words, what went wrong, and which step's code is it in?"
 TESTS_FAILED = "Some tests failed. Which one, and is the test wrong or the app?"
 
 # README sections in the order they appear. Build plan, Project structure and Testing are built
@@ -106,6 +116,7 @@ SECTIONS = [
     "Testing",
     "Challenges and what I learned",
     "Roadmap",
+    "Further resources",
 ]
 
 # Sections that only exist once the app is built; README Part Two appends whichever are missing.

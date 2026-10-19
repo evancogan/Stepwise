@@ -78,6 +78,9 @@ def draft(project: Project, live: Mapping[str, str] | None = None, here: str | N
             lines += [highlight(line) for line in libraries] if here == "deps" else libraries
             if lines:
                 body.append("\n".join(lines))
+        if section == "Further resources" and (links := project.items("resources")):
+            listing = "\n".join(f"- {link}" for link in links)
+            body.append(highlight(listing) if here == "list:resources" else listing)
         if section == "Testing" and tests:
             done = [bool(project.answer(f"test{n}.done")) for n in range(1, len(tests) + 1)]
             body.append(checklist(tests, done, list_here("tests")))

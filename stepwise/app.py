@@ -4,6 +4,7 @@ import shutil
 import subprocess
 import time
 from pathlib import Path
+from urllib.parse import quote_plus
 
 from rich.text import Text
 from textual import on
@@ -21,7 +22,8 @@ from .pages import Page, page_missing, pages
 from .prereqs import CheckPanel, DependencyPanel
 from .readme import draft, part_two
 from .runner import RunPanel
-from .stages import INTROS, LAST_BUILT, PSEUDO_PRIMER, PSEUDO_WORDS, PSEUDOCODE_URL, TEST_PRIMER, TITLES
+from .stages import (INTROS, LAST_BUILT, PSEUDO_PRIMER, PSEUDO_WORDS, PSEUDOCODE_URL, SEARCH_URL, TEST_PRIMER,
+                     TITLES)
 from .steps import StepEditor
 from .store import Project, slugify
 
@@ -188,6 +190,12 @@ class StepwiseApp(App):
         self.project.log("open_article", url=PSEUDOCODE_URL)
         self.open_url(PSEUDOCODE_URL)
 
+    @on(Button.Pressed, "#open-research")
+    def open_research(self) -> None:
+        url = SEARCH_URL + quote_plus(f"how to build {self.project.answer('intent').strip() or self.project.name}")
+        self.project.log("open_research", url=url)
+        self.open_url(url)
+
     @on(OptionList.OptionSelected, "#sidebar")
     async def jump(self, event: OptionList.OptionSelected) -> None:
         kind, _, target = event.option.id.partition(":")
@@ -320,8 +328,11 @@ class StepwiseApp(App):
             widgets.append(Static(p.answer("intent"), classes="quote", markup=False))
             widgets.append(StepEditor(p, "steps", "Your steps"))
         elif page.kind == "list":
-            title = {"files": "Your files", "tests": "Your tests"}[page.key]
+            title = {"files": "Your files", "tests": "Your tests", "resources": "Your resources"}[page.key]
             widgets.append(StepEditor(p, page.key, title))
+        elif page.kind == "research":
+            widgets.append(Static(p.answer("intent"), classes="quote", markup=False))
+            widgets.append(Button("Search Google", id="open-research"))
         elif page.kind == "info":
             widgets.append(Markdown(PSEUDO_PRIMER if page.key == "pseudo" else TEST_PRIMER, classes="primer"))
             widgets.append(Static(PSEUDOCODE_URL, classes="hint", markup=False))

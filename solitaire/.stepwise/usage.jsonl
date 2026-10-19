@@ -1,0 +1,7 @@
+{"t": "2026-10-19T00:05:22", "event": "open", "stage": 1}
+{"t": "2026-10-19T00:05:22", "event": "view", "stage": 1, "page": "intent", "item": null, "ahead": null}
+{"t": "2026-10-19T00:05:33", "event": "answer", "key": "intent", "seconds": 10.9, "changed": false, "chars": 0, "lines": 0}
+{"t": "2026-10-19T00:05:34", "event": "view", "stage": 1, "page": "idea.use", "item": null, "ahead": null}
+{"t": "2026-10-19T00:05:36", "event": "answer", "key": "idea.use", "seconds": 2.0, "changed": false, "chars": 0, "lines": 0}
+{"t": "2026-10-19T00:05:36", "event": "view", "stage": 1, "page": "idea.why", "item": null, "ahead": null}
+{"t": "2026-10-19T00:05:40", "event": "answer", "key": "idea.why", "seconds": 3.6, "changed": false, "chars": 0, "lines": 0}

@@ -1,0 +1,2 @@
+# One library per line, the name you'd pip install, like:
+# PySide6

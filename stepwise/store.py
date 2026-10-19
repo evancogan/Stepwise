@@ -27,6 +27,7 @@ META = ".stepwise"
 ITEM_KEYS = {
     "steps": ["pseudo{n}", "code{n}.file", "code{n}.done", "code{n}.stuck"],
     "files": [],
+    "resources": [],
     "tests": ["test{n}.pseudo", "test{n}.done", "test{n}.stuck"],
 }
 
@@ -298,6 +299,8 @@ class Project:
             parts = []
             if stage == 1 and self.answer("intent"):
                 parts.append(f"**{INTENT_QUESTION}**\n\n{self.answer('intent')}\n")
+            if stage == 1 and self.items("resources"):
+                parts.append("**Further resources**\n\n" + "".join(f"- {r}\n" for r in self.items("resources")))
             if stage == 2 and steps:
                 parts.append("**Steps**\n\n" + "".join(f"{n}. {s}\n" for n, s in enumerate(steps, 1)))
             if stage == 3:
