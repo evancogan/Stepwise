@@ -238,3 +238,21 @@ NameScreen {
     padding: 1 2;
     height: auto;
 }
+
+.congrats-panel {
+    height: auto;
+}
+
+.congrats-title {
+    text-style: bold;
+    color: $accent;
+    margin: 1 0;
+}
+
+.congrats-stats {
+    margin: 1 0;
+}
+
+.congrats-panel Button {
+    margin-top: 1;
+}

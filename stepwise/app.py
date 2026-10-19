@@ -207,7 +207,7 @@ class StepwiseApp(App):
             for i in range(1, TOTAL + 1)
         )
         if self.current > TOTAL:
-            where = "All ten stages done"
+            where = "All ten stages done" if self.project.stage > LAST_BUILT else "Finish"
         else:
             where = f"Stage {self.current} of {TOTAL}"
             if len(self.pages) > 1:
@@ -234,6 +234,11 @@ class StepwiseApp(App):
                 if n == self.page:
                     highlight = sidebar.option_count
                 sidebar.add_option(Option(Text(f"    {tick} {label}", style=style), id=f"page:{i},{n}"))
+        finished = reached > LAST_BUILT
+        mark = "›" if self.current > TOTAL else "✓" if finished else " "
+        if self.current > TOTAL:
+            highlight = sidebar.option_count
+        sidebar.add_option(Option(Text(f"{mark} Finish", style="" if finished else "dim"), id=f"stage:{TOTAL + 1}"))
         sidebar.highlighted = highlight or min(self.current, TOTAL) - 1
 
     # --- saving --------------------------------------------------------
@@ -285,13 +290,9 @@ class StepwiseApp(App):
     def page_widgets(self, page: Page) -> list[Widget]:
         p, n = self.project, self.current
         if page.kind == "done":
-            return [
-                Label("You built it.", classes="stage-title"),
-                Static(f"All ten stages are done. {p.name} has a plan, code you wrote yourself, tests, and a "
-                       "README in your own words.", classes="intro"),
-                Static(f"Everything is in:\n\n  {p.root}", classes="intro"),
-                Static("Your notes from every stage are in notes.md.", classes="hint"),
-            ]
+            back = Button("‹ Back", id="back")
+            back.can_focus = False
+            return [CongratsPanel(p), Horizontal(back, id="nav")]
         widgets: list[Widget] = [Label(f"{n}. {TITLES[n - 1]}", classes="stage-title")]
         if self.page == 0:
             widgets.append(Static(INTROS[n], classes="intro"))
@@ -463,6 +464,56 @@ class PartTwoPanel(Vertical):
 
     @on(Button.Pressed, "#open-code")
     def open_code(self) -> None:
+        open_in_code(self.project, self.project.readme, "readme")
+
+
+class CongratsPanel(Vertical):
+    """The page after stage 10. It opens at any time, like every stage, showing whatever's been done so far."""
+
+    def __init__(self, project: Project):
+        super().__init__(classes="congrats-panel")
+        self.project = project
+
+    def compose(self) -> ComposeResult:
+        p = self.project
+        with Vertical(classes="panel-body"):
+            yield Label(f"Congratulations! You built {p.name}.", classes="congrats-title")
+            yield Static("Every line of it is yours. You planned it, wrote it, ran it, tested it and wrote it up, "
+                         "one stage at a time, without anything writing it for you.", classes="intro")
+            yield Static("\n".join(f"• {line}" for line in self.stats()), classes="congrats-stats", markup=False)
+            if again := p.answer("review.again"):
+                yield Label("Your advice to yourself, for next time", classes="minor")
+                yield Static(again, classes="quote", markup=False)
+            if later := p.answer("steps.later"):
+                yield Label("What you said you'd add next", classes="minor")
+                yield Static(later, classes="quote", markup=False)
+            yield Static(f"Your app, its README and your notes from every stage are in:\n  {p.root}",
+                         classes="hint", markup=False)
+            if shutil.which("code"):
+                yield Button("Open your README", id="open-readme", variant="primary",
+                             disabled=not p.readme.is_file())
+
+    def stats(self) -> list[str]:
+        p = self.project
+        steps, tests = p.steps(), p.tests()
+        built = sum(bool(p.answer(f"code{n}.done")) for n in range(1, len(steps) + 1))
+        written = sum(bool(p.answer(f"test{n}.done")) for n in range(1, len(tests) + 1))
+        lines = [f"{built} of {len(steps)} steps built, across {len(p.files())} files"]
+        if tests:
+            passing = " and passing" if p.outcome("tests") == "ok" else ""
+            lines.append(f"{written} tests written{passing}")
+        failures = p.failures("app")
+        if p.outcome("app") == "ok":
+            lines.append("It ran on the first try" if not failures else
+                         f"It took {failures + 1} runs to get it working, and you explained every error on the way")
+        if started := p.started():
+            days = (time.time() - started.timestamp()) / 86400
+            lines.append(f"Started {started:%d %B}" + (", and finished the same day" if days < 1 else
+                                                         f", {int(days)} days ago"))
+        return lines
+
+    @on(Button.Pressed, "#open-readme")
+    def open_readme(self) -> None:
         open_in_code(self.project, self.project.readme, "readme")
 
 

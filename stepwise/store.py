@@ -114,6 +114,18 @@ class Project:
 
     # --- usage log -----------------------------------------------------
 
+    def started(self) -> datetime | None:
+        """When the user first opened this project in Stepwise, from the first line of its log."""
+        path = self.meta / "usage.jsonl"
+        if not path.is_file():
+            return None
+        with open(path, encoding="utf-8") as f:
+            first = f.readline()
+        try:
+            return datetime.fromisoformat(json.loads(first)["t"])
+        except (ValueError, KeyError):
+            return None
+
     def log(self, event: str, **data) -> None:
         record = {"t": datetime.now().isoformat(timespec="seconds"), "event": event, **data}
         with open(self.meta / "usage.jsonl", "a", encoding="utf-8", newline="\n") as f:
