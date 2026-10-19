@@ -236,7 +236,7 @@ class StepwiseApp(App):
             if i != self.current:
                 continue
             for n, page in enumerate(self.pages):
-                tick = "✓" if page_done(self.project, page) else "□"
+                tick = "✓" if i <= reached and page_done(self.project, page) else "□"
                 label = page.label if len(page.label) <= 24 else page.label[:23].rstrip() + "…"
                 style = "bold" if n == self.page else "dim" if tick == "✓" or i > reached else ""
                 if n == self.page:
