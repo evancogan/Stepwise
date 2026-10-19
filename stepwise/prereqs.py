@@ -262,7 +262,10 @@ class DependencyPanel(Vertical):
 
 def deps_missing(project: Project) -> str:
     """What's wrong with the dependency files, for the stage 4 page gate."""
-    for lang in detect(project):
+    languages = detect(project)
+    if not languages:
+        return "List your files first, so Stepwise knows which dependency file to look for."
+    for lang in languages:
         _, deps, problem = dependency_file(project, lang)
         if deps is None:
             return problem
