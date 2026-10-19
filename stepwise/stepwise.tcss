@@ -217,3 +217,24 @@ NameScreen {
 #branch {
     height: auto;
 }
+
+/* Panels that need something the user hasn't made yet (steps, files, a command) are greyed,
+   with a plain line above saying what they're waiting for. */
+.panel-body {
+    height: auto;
+}
+
+.waiting {
+    opacity: 45%;
+}
+
+.waiting-note {
+    color: $text-muted;
+    margin: 1 0;
+}
+
+.sample {
+    border: round $panel-lighten-2;
+    padding: 1 2;
+    height: auto;
+}

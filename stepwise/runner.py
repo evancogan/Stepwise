@@ -64,14 +64,20 @@ class RunPanel(Vertical):
         self.stopped = False
 
     def compose(self) -> ComposeResult:
-        yield Static(f"$ {self.command}", classes="command", markup=False)
-        yield Static(f"Runs in {self.project.root}", classes="hint", markup=False)
-        with Horizontal(classes="run-buttons"):
-            yield Button("Run it" if self.kind == "app" else "Run the tests", id="run", variant="primary")
-            yield Button("Stop", id="stop", disabled=True)
-        yield RichLog(id="output", max_lines=2000, wrap=True)
-        yield Static(id="run-status")
-        yield Vertical(id="branch")
+        if not self.command:
+            what = "Your app runs" if self.kind == "app" else "Your tests run"
+            yield Static(f"{what} here once you've typed {'its' if self.kind == 'app' else 'their'} command "
+                         "on the previous page.", classes="waiting-note")
+        with Vertical(classes="panel-body" + ("" if self.command else " waiting")):
+            yield Static(f"$ {self.command or '…'}", classes="command", markup=False)
+            yield Static(f"Runs in {self.project.root}", classes="hint", markup=False)
+            with Horizontal(classes="run-buttons"):
+                yield Button("Run it" if self.kind == "app" else "Run the tests", id="run", variant="primary",
+                             disabled=not self.command)
+                yield Button("Stop", id="stop", disabled=True)
+            yield RichLog(id="output", max_lines=2000, wrap=True)
+            yield Static(id="run-status")
+            yield Vertical(id="branch")
 
     async def on_mount(self) -> None:
         if outcome := self.project.outcome(self.kind):
@@ -84,7 +90,7 @@ class RunPanel(Vertical):
 
     @on(Button.Pressed, "#run")
     def start(self) -> None:
-        if self.process:
+        if self.process or not self.command:  # an empty command exits 0, which would look like a clean run
             return
         n = self.project.failures(self.kind)
         if self.project.outcome(self.kind) == "failed" and not self.project.answer(f"{self.kind}.attempt{n}"):
@@ -112,6 +118,8 @@ class RunPanel(Vertical):
                 pass
 
     async def run_command(self) -> None:
+        if not self.command:
+            return
         log = self.query_one("#output", RichLog)
         log.clear()
         await self.query_one("#branch").remove_children()

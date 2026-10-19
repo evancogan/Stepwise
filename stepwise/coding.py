@@ -45,20 +45,28 @@ class CodePanel(Vertical):
         p = self.project
         yield Label("Your pseudo-code", classes="minor")
         yield Static(p.answer(self.pseudo_key) or "(no pseudo-code yet)", classes="quote", markup=False)
-        if self.kind == "steps":
-            yield Label("Which file does this step go in?", classes="question")
-            options = [(f"{name}  ({purpose})" if purpose else name, name) for name, purpose in p.files()]
-            with Horizontal(classes="file-pick"):
-                yield Select(options, value=self.default_file(), prompt="Choose a file", id="file-select")
-                yield Button("Add a file", id="add-file")
-        else:
-            yield Label(f"Your test file: {self.file_name or '(not chosen yet)'}", classes="question")
-        with Horizontal(classes="file-bar"):
-            if shutil.which("code"):
-                yield Button("Open in VS Code", id="open-file")
-            yield Static(id="file-status")
-        yield TextArea("", read_only=True, soft_wrap=False, show_line_numbers=True, id="file-view")
-        yield Checkbox("It's written and saved", value=bool(p.answer(f"{self.prefix}.done")), id="done")
+        # The file part needs files from stage 4 (or, for tests, the test file named in stage 9).
+        ready = bool(p.files()) if self.kind == "steps" else bool(self.file_name)
+        if not ready:
+            yield Static("Your files from stage 4 appear here." if self.kind == "steps"
+                         else "Your test file appears here once you've named it on this stage's first page.",
+                         classes="waiting-note")
+        with Vertical(classes="panel-body" + ("" if ready else " waiting")):
+            if self.kind == "steps":
+                yield Label("Which file does this step go in?", classes="question")
+                options = [(f"{name}  ({purpose})" if purpose else name, name) for name, purpose in p.files()]
+                with Horizontal(classes="file-pick"):
+                    yield Select(options, value=self.default_file(), prompt="Choose a file", id="file-select")
+                    yield Button("Add a file", id="add-file")
+            else:
+                yield Label(f"Your test file: {self.file_name or '(not chosen yet)'}", classes="question")
+            with Horizontal(classes="file-bar"):
+                if shutil.which("code"):
+                    yield Button("Open in VS Code", id="open-file")
+                yield Static(id="file-status")
+            yield TextArea("", read_only=True, soft_wrap=False, show_line_numbers=True, id="file-view")
+            yield Checkbox("It's written and saved", value=bool(p.answer(f"{self.prefix}.done")), id="done",
+                           disabled=not ready)
         yield Label("Stuck? What did you expect to happen, and what happened instead?", classes="question")
         yield AnswerArea(f"{self.prefix}.stuck", p.answer(f"{self.prefix}.stuck"), "Optional")
 

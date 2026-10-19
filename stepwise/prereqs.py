@@ -145,21 +145,28 @@ class CheckPanel(Vertical):
     def __init__(self, project: Project):
         super().__init__(classes="check-panel")
         self.project = project
+        self.ready = bool(project.files())  # what to check comes from the files listed in stage 4
 
     def compose(self) -> ComposeResult:
-        yield Static("Before running your app, Stepwise checks your prerequisites from your project folder, "
-                     "using the same terminal setup it runs your app with.", classes="intro")
-        with Horizontal(classes="run-buttons"):
-            yield Button("Check again", id="check", variant="primary")
-            yield Button("Edit dependency file", id="edit-deps")
-        yield Static(id="check-results")
+        if not self.ready:
+            yield Static("Stepwise checks your prerequisites once you've listed your files in stage 4.",
+                         classes="waiting-note")
+        with Vertical(classes="panel-body" + ("" if self.ready else " waiting")):
+            yield Static("Before running your app, Stepwise checks your prerequisites from your project folder, "
+                         "using the same terminal setup it runs your app with.", classes="intro")
+            with Horizontal(classes="run-buttons"):
+                yield Button("Check again", id="check", variant="primary", disabled=not self.ready)
+                yield Button("Edit dependency file", id="edit-deps", disabled=not self.ready)
+            yield Static(id="check-results")
 
     def on_mount(self) -> None:
-        self.run_worker(self.run_check(), exclusive=True, group="check")
+        if self.ready:
+            self.run_worker(self.run_check(), exclusive=True, group="check")
 
     @on(Button.Pressed, "#check")
     def check_again(self) -> None:
-        self.run_worker(self.run_check(), exclusive=True, group="check")
+        if self.ready:
+            self.run_worker(self.run_check(), exclusive=True, group="check")
 
     @on(Button.Pressed, "#edit-deps")
     async def edit(self) -> None:
@@ -195,6 +202,11 @@ class DependencyPanel(Vertical):
                 project.log("deps_created", file=lang.new_dep_path(project).name)
 
     def compose(self) -> ComposeResult:
+        if not self.project.files():
+            yield Static("Your dependency file appears here once you've listed your files.", classes="waiting-note")
+            yield Static("requirements.txt, package.json, go.mod…\n\nThe file, live as you save it\n"
+                         "Stepwise reads: …", classes="waiting sample", markup=False)
+            return
         if not self.languages:
             yield Static("Stepwise doesn't recognise the language of the files you listed, so it can't make a "
                          "dependency file for you. List the libraries your app needs under Prerequisites in your "

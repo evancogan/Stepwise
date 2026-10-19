@@ -100,7 +100,12 @@ class StepwiseApp(App):
 
     @property
     def pages(self) -> list[Page]:
-        return pages(self.project, self.current)
+        return pages(self.project, self.current) or [Page("empty", label="Nothing yet", note="Nothing here yet.")]
+
+    @property
+    def ahead(self) -> bool:
+        """On a stage past the user's progress: clicked into to see what's coming, not to finish it."""
+        return self.current > self.project.stage
 
     def first_open_page(self, stage: int) -> int:
         stage_pages = pages(self.project, stage)
@@ -111,7 +116,8 @@ class StepwiseApp(App):
         self.current = stage
         self.page = max(0, min(page, len(self.pages) - 1))
         here = self.pages[self.page]
-        self.project.log("view", stage=stage, page=here.key or here.kind, item=here.item or None)
+        self.project.log("view", stage=stage, page=here.key or here.kind, item=here.item or None,
+                         ahead=self.ahead or None)
         self.refresh_chrome()
         container = self.query_one("#stage", VerticalScroll)
         await container.remove_children()
@@ -134,6 +140,13 @@ class StepwiseApp(App):
         if self.current > LAST_BUILT:
             return
         self.save_all()
+        if self.ahead:
+            # Nothing on a stage the user hasn't reached is theirs to finish yet, so Next just moves on.
+            if self.page < len(self.pages) - 1:
+                await self.go(self.current, self.page + 1)
+            elif self.current < LAST_BUILT:
+                await self.go(self.current + 1, 0)
+            return
         here = self.pages[self.page]
         if problem := page_missing(self.project, here):
             self.project.log("blocked", stage=self.current, page=here.key or here.kind, reason=problem)
@@ -150,7 +163,8 @@ class StepwiseApp(App):
             await self.go(self.current, self.first_open_page(self.current))
             return
         nxt = self.current + 1
-        if nxt > self.project.stage:
+        # Only finishing the furthest stage moves progress on; a stage revisited behind it never does.
+        if self.current == self.project.stage:
             self.project.stage = nxt
             self.project.log("advance", stage=nxt)
         await self.go(nxt, 0)
@@ -209,13 +223,14 @@ class StepwiseApp(App):
         highlight = 0
         for i, title in enumerate(TITLES, 1):
             mark = "✓" if i < reached else "›" if i == self.current else " "
-            sidebar.add_option(Option(f"{mark} {i}. {title}", id=f"stage:{i}", disabled=i > reached))
+            # Stages past the user's progress stay clickable, so anyone can see what's coming; dim marks them as not started.
+            sidebar.add_option(Option(Text(f"{mark} {i}. {title}", style="dim" if i > reached else ""), id=f"stage:{i}"))
             if i != self.current:
                 continue
             for n, page in enumerate(self.pages):
                 tick = "□" if page_missing(self.project, page) else "✓"
                 label = page.label if len(page.label) <= 24 else page.label[:23].rstrip() + "…"
-                style = "bold" if n == self.page else "dim" if tick == "✓" else ""
+                style = "bold" if n == self.page else "dim" if tick == "✓" or i > reached else ""
                 if n == self.page:
                     highlight = sidebar.option_count
                 sidebar.add_option(Option(Text(f"    {tick} {label}", style=style), id=f"page:{i},{n}"))
@@ -283,7 +298,7 @@ class StepwiseApp(App):
         if n == 1 and self.page == 0:
             widgets.append(Static("Answers save when you pause typing. Each one becomes part of your app's "
                                   "README; the preview on the right shows where.", classes="hint"))
-        if page.note:
+        if page.note and page.kind != "empty":
             widgets.append(Label(page.note, classes="section"))
         if page.prompt:
             widgets.append(Label(page.prompt, classes="question"))
@@ -325,6 +340,10 @@ class StepwiseApp(App):
             widgets.append(ReadmePanel(p))
         elif page.kind == "part2":
             widgets.append(PartTwoPanel(p))
+        elif page.kind == "empty":
+            widgets.append(Static(page.note, classes="waiting-note"))
+            if page.placeholder:
+                widgets.append(Static(page.placeholder, classes="waiting sample", markup=False))
 
         back = Button("‹ Back", id="back", disabled=n == 1 and self.page == 0)
         back.can_focus = False  # so Tab from an answer lands on Next, and Tab, Enter moves forward
@@ -391,18 +410,20 @@ class PartTwoPanel(Vertical):
         self.project = project
 
     def compose(self) -> ComposeResult:
-        yield Label("Now finish your README with Part Two.", classes="question")
-        yield Static("This adds the sections your app has earned since Part One (how it's laid out, how to run "
-                     "it, what's known to break, the tests, and what you learned) to the end of README.md. "
-                     "Nothing you've already written is changed.", classes="intro")
-        yield Static("If a stranger read your README, what would they still have to guess? Fix that, then save.",
-                     classes="hint")
-        with Horizontal(classes="readme-buttons"):
-            yield Button("Add Part Two to README", id="add-part-two", variant="primary")
-            if shutil.which("code"):
-                yield Button("Open in VS Code", id="open-code")
-        yield Static(str(self.project.readme), classes="hint")
-        yield Static(id="readme-status")
+        yield Static("Part Two is added after README Part One, in stage 4.", classes="waiting-note", id="part2-waiting")
+        with Vertical(classes="panel-body", id="part2-body"):
+            yield Label("Now finish your README with Part Two.", classes="question")
+            yield Static("This adds the sections your app has earned since Part One (how it's laid out, how to run "
+                         "it, what's known to break, the tests, and what you learned) to the end of README.md. "
+                         "Nothing you've already written is changed.", classes="intro")
+            yield Static("If a stranger read your README, what would they still have to guess? Fix that, then save.",
+                         classes="hint")
+            with Horizontal(classes="readme-buttons"):
+                yield Button("Add Part Two to README", id="add-part-two", variant="primary")
+                if shutil.which("code"):
+                    yield Button("Open in VS Code", id="open-code")
+            yield Static(str(self.project.readme), classes="hint")
+            yield Static(id="readme-status")
 
     def on_mount(self) -> None:
         self.check()
@@ -410,7 +431,14 @@ class PartTwoPanel(Vertical):
 
     def check(self) -> None:
         p = self.project
-        if p.part_two_written():
+        # Part Two goes on the end of the README written in Part One; without it there's nothing to add to.
+        ready = p.readme_written()
+        self.query_one("#part2-waiting").display = not ready
+        self.query_one("#part2-body").set_class(not ready, "waiting")
+        self.query_one("#add-part-two", Button).disabled = not ready
+        if not ready:
+            status = ""
+        elif p.part_two_written():
             status = "[green]✓ README.md has Part Two and your edits in it.[/]"
         elif p.part_two_added():
             status = "[yellow]Part Two is added but untouched. Edit it and save.[/]"
@@ -420,6 +448,8 @@ class PartTwoPanel(Vertical):
 
     @on(Button.Pressed, "#add-part-two")
     def add(self) -> None:
+        if not self.project.readme_written():
+            return
         self.app.save_all()
         text = part_two(self.project)
         self.project.append_part_two(text)

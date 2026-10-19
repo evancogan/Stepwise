@@ -14,8 +14,8 @@ class Page:
 
     kind: "answer", "list" (key is the list: steps, files or tests), "info" (key is the primer:
     pseudo or tests), "deps" (the dependency file), "code" (key is steps or tests, item is the
-    position), "check" (the prerequisites check), "run" (key is app or tests), "readme", "part2"
-    or "done".
+    position), "check" (the prerequisites check), "run" (key is app or tests), "readme", "part2",
+    "empty" (stands in for pages that need steps or tests the user hasn't added yet) or "done".
     """
     kind: str
     key: str = ""
@@ -33,6 +33,26 @@ def question(key: str, note: str = "", label: str = "") -> Page:
     return Page("answer", q.key, q.prompt, q.section, label=label or q.heading or q.section, note=note, line=q.code or q.line)
 
 
+def waiting_for(what: str, stage: int, does: str, sample: str) -> Page:
+    """Shown where a stage's pages come from steps or tests the user hasn't added yet."""
+    return Page("empty", what, label=f"No {what} yet",
+                note=f"Each {what[:-1]} from stage {stage} gets its own page here, {does}. Add your {what} in "
+                     f"stage {stage} first.",
+                placeholder=sample)
+
+
+STEP_PSEUDO = waiting_for("steps", 2, "where you write it in plain words",
+                          "Step 1 of 3: …\n\nASK…, IF…, SHOW…")
+STEP_CODE = waiting_for("steps", 2, "where you write its code",
+                        "Step 1 of 3: …\nYour pseudo-code\nWhich file does this step go in?\n"
+                        "The file, live as you save it\n☐ It's written and saved")
+TEST_PSEUDO = waiting_for("tests", 7, "where you write it in plain words",
+                          "Test 1 of 2: …\n\nGIVEN…, WHEN…, THEN…")
+TEST_CODE = waiting_for("tests", 7, "where you write its code",
+                        "Test 1 of 2: …\nYour pseudo-code\nYour test file, live as you save it\n"
+                        "☐ It's written and saved")
+
+
 def pages(project: Project, stage: int) -> list[Page]:
     if stage > LAST_BUILT:
         return [Page("done", label="Done")]
@@ -44,8 +64,8 @@ def pages(project: Project, stage: int) -> list[Page]:
         return [Page("list", "steps", section="Build plan", label="Your steps"), question("steps.walk"), question("steps.later")]
     if stage == 3:
         return [Page("info", "pseudo", label="What is pseudocode?"),
-                *(Page("answer", f"pseudo{n}", f"Step {n} of {len(steps)}: {step}", placeholder=PSEUDO_PLACEHOLDER,
-                       label=f"Step {n}: {step}") for n, step in enumerate(steps, 1)),
+                *([Page("answer", f"pseudo{n}", f"Step {n} of {len(steps)}: {step}", placeholder=PSEUDO_PLACEHOLDER,
+                        label=f"Step {n}: {step}") for n, step in enumerate(steps, 1)] or [STEP_PSEUDO]),
                 question("pseudo.state", note="Now look back over your pseudo-code."), question("pseudo.input")]
     if stage == 4:
         return [question("stack.runs"), question("stack.built"),
@@ -56,7 +76,7 @@ def pages(project: Project, stage: int) -> list[Page]:
                 question("setup.steps", label="Setting it up"), Page("readme", label="README draft")]
     if stage == 5:
         return [Page("code", "steps", f"Step {n} of {len(steps)}: {step}", "Build plan",
-                     label=f"Step {n}: {step}", item=n) for n, step in enumerate(steps, 1)]
+                     label=f"Step {n}: {step}", item=n) for n, step in enumerate(steps, 1)] or [STEP_CODE]
     if stage == 6:
         return [question("run.command"), Page("check", section="Prerequisites", label="Check prerequisites"),
                 Page("run", "app", section="Getting started", label="Run it"), question("run.result"),
@@ -66,12 +86,12 @@ def pages(project: Project, stage: int) -> list[Page]:
         return [Page("list", "tests", TESTS_QUESTION, "Testing", label="Your tests")]
     if stage == 8:
         return [Page("info", "tests", label="Writing tests in words"),
-                *(Page("answer", f"test{n}.pseudo", f"Test {n} of {len(tests)}: {test}", placeholder=TEST_PLACEHOLDER,
-                       label=f"Test {n}: {test}") for n, test in enumerate(tests, 1))]
+                *([Page("answer", f"test{n}.pseudo", f"Test {n} of {len(tests)}: {test}", placeholder=TEST_PLACEHOLDER,
+                        label=f"Test {n}: {test}") for n, test in enumerate(tests, 1)] or [TEST_PSEUDO])]
     if stage == 9:
         return [question("tests.file", label="Your test file"),
-                *(Page("code", "tests", f"Test {n} of {len(tests)}: {test}", "Testing", label=f"Test {n}: {test}",
-                       item=n) for n, test in enumerate(tests, 1)),
+                *([Page("code", "tests", f"Test {n} of {len(tests)}: {test}", "Testing", label=f"Test {n}: {test}",
+                        item=n) for n, test in enumerate(tests, 1)] or [TEST_CODE]),
                 question("tests.command"), Page("run", "tests", section="Testing", label="Run the tests")]
     return [question("review.critical"), question("review.hardest"), question("review.choice"),
             question("review.again"), Page("part2", label="README Part Two")]
@@ -79,6 +99,8 @@ def pages(project: Project, stage: int) -> list[Page]:
 
 def page_missing(project: Project, page: Page) -> str:
     """What's left to do on this page, or an empty string."""
+    if page.kind == "empty":
+        return page.note
     if page.kind == "answer" and not project.answer(page.key):
         return "Answer this one before moving on."
     if page.kind == "list" and not project.items(page.key):
