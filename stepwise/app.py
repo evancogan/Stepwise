@@ -192,7 +192,7 @@ class StepwiseApp(App):
 
     @on(Button.Pressed, "#open-research")
     def open_research(self) -> None:
-        url = SEARCH_URL + quote_plus(f"how to build {self.project.answer('intent').strip() or self.project.name}")
+        url = SEARCH_URL + quote_plus(f"how to build {self.project.name}")
         self.project.log("open_research", url=url)
         self.open_url(url)
 
