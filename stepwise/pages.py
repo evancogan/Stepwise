@@ -59,9 +59,9 @@ def pages(project: Project, stage: int) -> list[Page]:
     steps, tests = project.steps(), project.tests()
     if stage == 1:
         return [Page("answer", "intent", INTENT_QUESTION, "the opening line", label="Description"),
-                question("idea.use"), question("idea.why"),
                 Page("research", prompt=RESEARCH_PROMPT, label="Research"),
-                Page("list", "resources", RESOURCES_QUESTION, "Further resources", label="Your resources")]
+                Page("list", "resources", RESOURCES_QUESTION, "Further resources", label="Your resources"),
+                question("idea.use"), question("idea.why")]
     if stage == 2:
         return [Page("list", "steps", section="Build plan", label="Your steps"), question("steps.walk"), question("steps.later")]
     if stage == 3:

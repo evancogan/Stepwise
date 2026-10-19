@@ -36,3 +36,44 @@
 {"t": "2026-10-19T11:02:37", "event": "view", "stage": 9, "page": "tests.file", "item": null, "ahead": true}
 {"t": "2026-10-19T11:02:39", "event": "answer", "key": "tests.file", "seconds": 1.8, "changed": false, "chars": 0, "lines": 0}
 {"t": "2026-10-19T11:02:39", "event": "view", "stage": 8, "page": "tests", "item": null, "ahead": true}
+{"t": "2026-10-19T11:04:29", "event": "open", "stage": 1}
+{"t": "2026-10-19T11:04:29", "event": "view", "stage": 1, "page": "intent", "item": null, "ahead": null}
+{"t": "2026-10-19T11:05:35", "event": "answer", "key": "intent", "seconds": 66.4, "changed": false, "chars": 0, "lines": 0}
+{"t": "2026-10-19T11:05:35", "event": "view", "stage": 2, "page": "steps", "item": null, "ahead": true}
+{"t": "2026-10-19T11:05:36", "event": "view", "stage": 6, "page": "run.command", "item": null, "ahead": true}
+{"t": "2026-10-19T11:05:37", "event": "answer", "key": "run.command", "seconds": 1.0, "changed": false, "chars": 0, "lines": 0}
+{"t": "2026-10-19T11:05:37", "event": "view", "stage": 7, "page": "tests", "item": null, "ahead": true}
+{"t": "2026-10-19T11:05:38", "event": "view", "stage": 9, "page": "tests.file", "item": null, "ahead": true}
+{"t": "2026-10-19T11:05:40", "event": "answer", "key": "tests.file", "seconds": 1.0, "changed": false, "chars": 0, "lines": 0}
+{"t": "2026-10-19T11:05:40", "event": "view", "stage": 10, "page": "review.critical", "item": null, "ahead": true}
+{"t": "2026-10-19T11:05:41", "event": "view", "stage": 9, "page": "tests.file", "item": null, "ahead": true}
+{"t": "2026-10-19T11:05:42", "event": "view", "stage": 5, "page": "steps", "item": null, "ahead": true}
+{"t": "2026-10-19T11:05:42", "event": "view", "stage": 4, "page": "stack.runs", "item": null, "ahead": true}
+{"t": "2026-10-19T11:05:43", "event": "view", "stage": 2, "page": "steps", "item": null, "ahead": true}
+{"t": "2026-10-19T11:05:44", "event": "view", "stage": 3, "page": "steps", "item": null, "ahead": true}
+{"t": "2026-10-19T11:05:45", "event": "view", "stage": 6, "page": "run.command", "item": null, "ahead": true}
+{"t": "2026-10-19T11:05:46", "event": "view", "stage": 8, "page": "tests", "item": null, "ahead": true}
+{"t": "2026-10-19T11:05:48", "event": "view", "stage": 11, "page": "done", "item": null, "ahead": true}
+{"t": "2026-10-19T11:05:55", "event": "view", "stage": 1, "page": "intent", "item": null, "ahead": null}
+{"t": "2026-10-19T11:05:56", "event": "answer", "key": "intent", "seconds": 1.6, "changed": false, "chars": 0, "lines": 0}
+{"t": "2026-10-19T11:05:56", "event": "view", "stage": 1, "page": "idea.why", "item": null, "ahead": null}
+{"t": "2026-10-19T11:05:58", "event": "answer", "key": "idea.why", "seconds": 1.5, "changed": false, "chars": 0, "lines": 0}
+{"t": "2026-10-19T11:05:58", "event": "view", "stage": 1, "page": "resources", "item": null, "ahead": null}
+{"t": "2026-10-19T11:05:59", "event": "view", "stage": 5, "page": "steps", "item": null, "ahead": true}
+{"t": "2026-10-19T11:05:59", "event": "view", "stage": 6, "page": "run.command", "item": null, "ahead": true}
+{"t": "2026-10-19T11:06:00", "event": "view", "stage": 6, "page": "run.result", "item": null, "ahead": true}
+{"t": "2026-10-19T11:06:01", "event": "view", "stage": 6, "page": "run.limits", "item": null, "ahead": true}
+{"t": "2026-10-19T11:06:02", "event": "view", "stage": 7, "page": "tests", "item": null, "ahead": true}
+{"t": "2026-10-19T11:06:03", "event": "view", "stage": 11, "page": "done", "item": null, "ahead": true}
+{"t": "2026-10-19T11:06:04", "event": "view", "stage": 10, "page": "review.critical", "item": null, "ahead": true}
+{"t": "2026-10-19T11:06:05", "event": "view", "stage": 4, "page": "stack.runs", "item": null, "ahead": true}
+{"t": "2026-10-19T11:06:05", "event": "view", "stage": 2, "page": "steps", "item": null, "ahead": true}
+{"t": "2026-10-19T11:06:09", "event": "view", "stage": 1, "page": "intent", "item": null, "ahead": null}
+{"t": "2026-10-19T11:08:33", "event": "answer", "key": "intent", "seconds": 143.7, "changed": true, "chars": 28, "lines": 1}
+{"t": "2026-10-19T11:09:07", "event": "answer", "key": "intent", "seconds": 10.4, "changed": true, "chars": 51, "lines": 1}
+{"t": "2026-10-19T11:09:08", "event": "answer", "key": "intent", "seconds": 1.4, "changed": false, "chars": 51, "lines": 1}
+{"t": "2026-10-19T11:09:08", "event": "view", "stage": 1, "page": "idea.use", "item": null, "ahead": null}
+{"t": "2026-10-19T11:14:32", "event": "answer", "key": "idea.use", "seconds": 323.8, "changed": true, "chars": 30, "lines": 1}
+{"t": "2026-10-19T11:14:44", "event": "answer", "key": "idea.use", "seconds": 5.0, "changed": false, "chars": 30, "lines": 1}
+{"t": "2026-10-19T11:14:47", "event": "answer", "key": "idea.use", "seconds": 2.5, "changed": false, "chars": 30, "lines": 1}
+{"t": "2026-10-19T11:15:59", "event": "answer", "key": "idea.use", "seconds": 7.2, "changed": false, "chars": 30, "lines": 1}
