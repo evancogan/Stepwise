@@ -96,6 +96,10 @@ RESOURCES_QUESTION = (
 )
 SEARCH_URL = "https://www.google.com/search?q="
 
+
+def search_query(name: str) -> str:
+    return f"how to build your own {name}"
+
 RUN_FAILED ="It didn't run. Read the error above. In your own words, what went wrong, and which step's code is it in?"
 TESTS_FAILED = "Some tests failed. Which one, and is the test wrong or the app?"
 

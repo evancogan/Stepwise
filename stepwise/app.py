@@ -23,7 +23,7 @@ from .prereqs import CheckPanel, DependencyPanel
 from .readme import draft, part_two
 from .runner import RunPanel
 from .stages import (INTROS, LAST_BUILT, PSEUDO_PRIMER, PSEUDO_WORDS, PSEUDOCODE_URL, SEARCH_URL, TEST_PRIMER,
-                     TITLES)
+                     TITLES, search_query)
 from .steps import StepEditor
 from .store import Project, slugify
 
@@ -192,7 +192,7 @@ class StepwiseApp(App):
 
     @on(Button.Pressed, "#open-research")
     def open_research(self) -> None:
-        url = SEARCH_URL + quote_plus(f"how to build {self.project.name}")
+        url = SEARCH_URL + quote_plus(search_query(self.project.name))
         self.project.log("open_research", url=url)
         self.open_url(url)
 
@@ -331,7 +331,7 @@ class StepwiseApp(App):
             title = {"files": "Your files", "tests": "Your tests", "resources": "Your resources"}[page.key]
             widgets.append(StepEditor(p, page.key, title))
         elif page.kind == "research":
-            widgets.append(Static(p.answer("intent"), classes="quote", markup=False))
+            widgets.append(Static(search_query(p.name), classes="quote", markup=False))
             widgets.append(Button("Search Google", id="open-research"))
         elif page.kind == "info":
             widgets.append(Markdown(PSEUDO_PRIMER if page.key == "pseudo" else TEST_PRIMER, classes="primer"))
