@@ -330,12 +330,13 @@ class StepwiseApp(App):
         elif page.kind == "list":
             title = {"files": "Your files", "tests": "Your tests", "resources": "Your resources"}[page.key]
             widgets.append(StepEditor(p, page.key, title))
+            if page.key == "resources":
+                widgets.append(Label(RESEARCH_NOTES_PROMPT, classes="question"))
+                widgets.append(Static("→ README · What I learned from research", classes="tag"))
+                widgets.append(AnswerArea("research.notes", p.answer("research.notes"), "Optional"))
         elif page.kind == "research":
             widgets.append(Static(search_query(p.name), classes="quote", markup=False))
             widgets.append(Button("Search Google", id="open-research"))
-            widgets.append(Label(RESEARCH_NOTES_PROMPT, classes="question"))
-            widgets.append(Static("→ README · What I learned from research", classes="tag"))
-            widgets.append(AnswerArea("research.notes", p.answer("research.notes"), "Optional"))
         elif page.kind == "info":
             widgets.append(Markdown(PSEUDO_PRIMER if page.key == "pseudo" else TEST_PRIMER, classes="primer"))
             widgets.append(Static(PSEUDOCODE_URL, classes="hint", markup=False))

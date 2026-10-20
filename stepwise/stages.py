@@ -90,10 +90,10 @@ RESEARCH_PROMPT = (
     "Before you plan anything, see how others have built something like it. Search, read a few pages, and "
     "come back with what you found."
 )
-RESEARCH_NOTES_PROMPT = "Your notes: what did you learn? Anything that surprised you or changed your plan."
+RESEARCH_NOTES_PROMPT = "Your notes on these pages: what did you learn? Anything that surprised you or changed your plan."
 RESOURCES_QUESTION = (
     "Which pages helped? Add each link, one at a time. They become your README's Further resources, and "
-    "you can come back to them while you build."
+    "you can come back to them while you build. Then write down what you learned from them."
 )
 SEARCH_URL = "https://www.google.com/search?q="
 
