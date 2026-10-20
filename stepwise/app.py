@@ -22,7 +22,7 @@ from .pages import Page, page_done, page_missing, pages
 from .prereqs import CheckPanel, DependencyPanel
 from .readme import draft, part_two
 from .runner import RunPanel
-from .stages import (INTROS, LAST_BUILT, PSEUDO_PRIMER, PSEUDO_WORDS, PSEUDOCODE_URL, RESEARCH_NOTES_PROMPT,
+from .stages import (INTROS, LAST_BUILT, PSEUDO_PRIMER, PSEUDO_WORDS, PSEUDOCODE_URL, RESOURCES_QUESTION,
                      SEARCH_URL, TEST_PRIMER, TITLES, search_query)
 from .steps import StepEditor
 from .store import Project, projects_dir, slugify
@@ -329,14 +329,11 @@ class StepwiseApp(App):
             widgets.append(StepEditor(p, "steps", "Your steps"))
         elif page.kind == "list":
             title = {"files": "Your files", "tests": "Your tests", "resources": "Your resources"}[page.key]
-            widgets.append(StepEditor(p, page.key, title))
             if page.key == "resources":
-                widgets.append(Label(RESEARCH_NOTES_PROMPT, classes="question"))
-                widgets.append(Static("→ README · What I learned from research", classes="tag"))
-                widgets.append(AnswerArea("research.notes", p.answer("research.notes"), "Optional"))
-        elif page.kind == "research":
-            widgets.append(Static(search_query(p.name), classes="quote", markup=False))
-            widgets.append(Button("Search Google", id="open-research"))
+                widgets.append(Static(search_query(p.name), classes="quote", markup=False))
+                widgets.append(Button("Search Google", id="open-research"))
+                widgets.append(Label(RESOURCES_QUESTION, classes="question"))
+            widgets.append(StepEditor(p, page.key, title))
         elif page.kind == "info":
             widgets.append(Markdown(PSEUDO_PRIMER if page.key == "pseudo" else TEST_PRIMER, classes="primer"))
             widgets.append(Static(PSEUDOCODE_URL, classes="hint", markup=False))

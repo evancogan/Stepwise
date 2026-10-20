@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 from .prereqs import deps_missing
 from .stages import (FILES_QUESTION, INTENT_QUESTION, LAST_BUILT, PSEUDO_PLACEHOLDER, QUESTION, RESEARCH_PROMPT,
-                     RESOURCES_QUESTION, TESTS_QUESTION, TEST_PLACEHOLDER)
+                     TESTS_QUESTION, TEST_PLACEHOLDER)
 from .store import Project
 
 
@@ -12,7 +12,7 @@ from .store import Project
 class Page:
     """One screen within a stage. Each holds a single thing to do, so no page is a wall of fields.
 
-    kind: "answer", "list" (key is the list: steps, files, tests or resources), "research" (the search button), "info" (key is the primer:
+    kind: "answer", "list" (key is the list: steps, files, tests or resources, which also has the search button), "info" (key is the primer:
     pseudo or tests), "deps" (the dependency file), "code" (key is steps or tests, item is the
     position), "check" (the prerequisites check), "run" (key is app or tests), "readme", "part2",
     "empty" (stands in for pages that need steps or tests the user hasn't added yet) or "done".
@@ -59,8 +59,8 @@ def pages(project: Project, stage: int) -> list[Page]:
     steps, tests = project.steps(), project.tests()
     if stage == 1:
         return [Page("answer", "intent", INTENT_QUESTION, "the opening line", label="Description"),
-                Page("research", prompt=RESEARCH_PROMPT, label="Research"),
-                Page("list", "resources", RESOURCES_QUESTION, "Further resources", label="Your resources"),
+                Page("list", "resources", RESEARCH_PROMPT, "Further resources", label="Research"),
+                question("research.notes", label="What I learned"),
                 question("idea.use"), question("idea.why")]
     if stage == 2:
         return [Page("list", "steps", section="Build plan", label="Your steps"), question("steps.walk"), question("steps.later")]
@@ -100,9 +100,7 @@ def pages(project: Project, stage: int) -> list[Page]:
 
 
 def page_done(project: Project, page: Page) -> bool:
-    """Whether the sidebar ticks this page. The research page has no input of its own, so it follows the links."""
-    if page.kind == "research":
-        return bool(project.items("resources"))
+    """Whether the sidebar ticks this page."""
     return not page_missing(project, page)
 
 
