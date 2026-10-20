@@ -142,22 +142,8 @@ class StepwiseApp(App):
         if self.current > LAST_BUILT:
             return
         self.save_all()
-        if self.ahead:
-            # Nothing on a stage the user hasn't reached is theirs to finish yet, so Next just moves on.
-            if self.page < len(self.pages) - 1:
-                await self.go(self.current, self.page + 1)
-            elif self.current < LAST_BUILT:
-                await self.go(self.current + 1, 0)
-            return
         if self.page < len(self.pages) - 1:
             await self.go(self.current, self.page + 1)
-            return
-        # Pages can be skipped, so the whole stage is checked before leaving it.
-        if missing := [p.label for p in self.pages if page_missing(self.project, p)]:
-            self.project.log("blocked", stage=self.current, missing=missing)
-            self.notify("Before moving on, finish: " + ", ".join(missing) + ".",
-                        title="Not done yet", severity="warning", timeout=8)
-            await self.go(self.current, self.first_open_page(self.current))
             return
         nxt = self.current + 1
         # Only finishing the furthest stage moves progress on; a stage revisited behind it never does.
