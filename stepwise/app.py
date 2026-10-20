@@ -149,15 +149,10 @@ class StepwiseApp(App):
             elif self.current < LAST_BUILT:
                 await self.go(self.current + 1, 0)
             return
-        here = self.pages[self.page]
-        if problem := page_missing(self.project, here):
-            self.project.log("blocked", stage=self.current, page=here.key or here.kind, reason=problem)
-            self.notify(problem, severity="warning", timeout=5)
-            return
         if self.page < len(self.pages) - 1:
             await self.go(self.current, self.page + 1)
             return
-        # Pages can be skipped through the sidebar, so the whole stage is checked before leaving it.
+        # Pages can be skipped, so the whole stage is checked before leaving it.
         if missing := [p.label for p in self.pages if page_missing(self.project, p)]:
             self.project.log("blocked", stage=self.current, missing=missing)
             self.notify("Before moving on, finish: " + ", ".join(missing) + ".",
