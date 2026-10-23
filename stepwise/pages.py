@@ -1,10 +1,11 @@
 """The pages of each stage, and what each one needs before the user can move on."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
+from . import choices
 from .prereqs import check_state, deps_missing
-from .stages import (FILES_QUESTION, INTENT_QUESTION, LAST_BUILT, PSEUDO_PLACEHOLDER, QUESTION, RESEARCH_PROMPT,
-                     TESTS_QUESTION, TEST_PLACEHOLDER)
+from .stages import (BUILT_WHY, FILES_QUESTION, INTENT_QUESTION, LAST_BUILT, PSEUDO_PLACEHOLDER, QUESTION,
+                     RESEARCH_PROMPT, TESTS_QUESTION, TEST_PLACEHOLDER)
 from .store import Project
 
 
@@ -12,7 +13,8 @@ from .store import Project
 class Page:
     """One screen within a stage. Each holds a single thing to do, so no page is a wall of fields.
 
-    kind: "answer", "list" (key is the list: steps, files, tests or resources, which also has the search button), "info" (key is the primer:
+    kind: "answer", "choice" (multiple choice; the options come from choices.py),
+    "list" (key is the list: steps, files, tests or resources, which also has the search button), "info" (key is the primer:
     pseudo or tests), "deps" (the dependency file), "code" (key is steps or tests, item is the
     position), "check" (the prerequisites check; key is setup in stage 4 or app in stage 6), "run"
     (key is app or tests), "readme", "part2",
@@ -32,6 +34,29 @@ class Page:
 def question(key: str, note: str = "", label: str = "") -> Page:
     q = QUESTION[key]
     return Page("answer", q.key, q.prompt, q.section, label=label or q.heading or q.section, note=note, line=q.code or q.line)
+
+
+def choice(key: str, label: str, section: str = "") -> Page:
+    """`section` is where the preview scrolls to, for picks that feed the README without being an answer in it."""
+    q = QUESTION[key]
+    return Page("choice", q.key, q.prompt, section or q.section, label=label)
+
+
+def choosing(project: Project) -> list[Page]:
+    """Stage 4's questionnaire: where the app runs, a language, then a stack for it."""
+    answer = project.answer
+    ranking = [choice("choose.work", "What it does"),
+               *([choice("choose.ship", "How it ships")] if choices.asks_ship(answer) else []),
+               choice("choose.types", "Types"), choice("choose.memory", "Speed and memory"),
+               choice("choose.conc", "Doing things at once"), choice("choose.errors", "Errors")]
+    stack = [choice("choose.data", "Saving things"), choice("choose.effort", "How much help"),
+             choice("choose.stack", "Your stack", "Tech stack")]
+    built = question("stack.built")
+    return [choice("choose.runs", "Where it runs"), choice("choose.decided", "Help choosing"),
+            *(ranking if choices.helped(answer) else []),
+            choice("choose.language", "Your language", "Tech stack"),
+            *(stack if answer("choose.language") != "other" else []),
+            replace(built, prompt=BUILT_WHY) if choices.from_lists(answer) else built]
 
 
 def waiting_for(what: str, stage: int, does: str, sample: str) -> Page:
@@ -71,7 +96,7 @@ def pages(project: Project, stage: int) -> list[Page]:
                         label=f"Step {n}: {step}") for n, step in enumerate(steps, 1)] or [STEP_PSEUDO]),
                 question("pseudo.state", note="Now look back over your pseudo-code."), question("pseudo.input")]
     if stage == 4:
-        return [question("stack.runs"), question("stack.built"),
+        return [*choosing(project),
                 Page("list", "files", FILES_QUESTION, "Project structure", label="Your files"),
                 question("stack.tools"),
                 question("lang.version", label="Language version"),
@@ -113,6 +138,8 @@ def page_missing(project: Project, page: Page) -> str:
         return page.note
     if page.kind == "answer" and not project.answer(page.key):
         return "Answer this one before moving on."
+    if page.kind == "choice" and not choices.picked(page.key, project.answer):
+        return "Pick one before moving on."
     if page.kind == "list" and not project.items(page.key):
         return {"resources": "Add at least one link from your research before moving on.",
                 "steps": "Add at least one step before moving on.",

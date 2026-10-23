@@ -20,6 +20,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 
+from .choices import shown
 from .stages import INTENT_QUESTION, LAST_BUILT, QUESTIONS, TITLES
 
 META = ".stepwise"
@@ -392,7 +393,7 @@ class Project:
                         parts.append(f"**Failed run {n}**\n\n{text}\n")
             for q in QUESTIONS.get(stage, []):
                 if text := self.answer(q.key):
-                    parts.append(f"**{q.prompt}**\n\n{text}\n")
+                    parts.append(f"**{q.prompt}**\n\n{shown(q.key, text)}\n")
             if parts:
                 out.append(f"## {stage}. {TITLES[stage - 1]}\n")
                 out += parts

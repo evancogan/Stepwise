@@ -1,6 +1,10 @@
 import time
 
-from textual.widgets import Input, TextArea
+from rich.text import Text
+from textual.widgets import Input, OptionList, TextArea
+from textual.widgets.option_list import Option
+
+from . import choices
 
 SAVE_AFTER_IDLE = 5.0  # seconds without typing before an answer is written to disk
 
@@ -83,3 +87,41 @@ class AnswerLine(SavesAnswer, Input):
     async def on_input_submitted(self, event: Input.Submitted) -> None:
         event.stop()
         await self.app.action_next()
+
+
+class AnswerChoice(OptionList):
+    """A multiple-choice answer. Picking an option saves it straight away, so unlike typed answers
+    there's nothing to wait for. The picked option is marked ◉, like the sidebar's ticks."""
+
+    def __init__(self, key: str, options: list[choices.Option], picked: str):
+        super().__init__(classes="choice")
+        self.key = key
+        self.choices = options
+        self.picked = picked
+
+    def on_mount(self) -> None:
+        # None draws a line between options, so each one's explanation reads as part of it.
+        self.add_options(item for c in self.choices for item in (Option(self.prompt(c), id=c.key), None))
+        keys = [c.key for c in self.choices]
+        self.highlighted = keys.index(self.picked) if self.picked in keys else 0
+
+    def prompt(self, option: choices.Option) -> Text:
+        on = option.key == self.picked
+        text = Text(f"{'◉' if on else '○'} {option.label}", style="bold" if on else "")
+        for line in option.hint.splitlines():
+            text.append(f"\n{line}", style="dim")  # flush left: a long line wraps there anyway
+        return text
+
+    def on_option_list_option_selected(self, event: OptionList.OptionSelected) -> None:
+        event.stop()
+        before, self.picked = self.picked, event.option.id
+        for i, option in enumerate(self.choices):
+            self.replace_option_prompt_at_index(i, self.prompt(option))
+        project = self.app.project
+        project.set_answer(self.key, self.picked)
+        project.write_notes()
+        # What was on offer is logged too, so the ranking can be judged against what people pick.
+        project.log("choice", key=self.key, picked=self.picked, before=before or None,
+                    shown=[c.key for c in self.choices])
+        self.app.refresh_chrome()  # a pick can add or remove pages, which the top bar counts
+        self.app.schedule_preview()

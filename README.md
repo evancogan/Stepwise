@@ -66,8 +66,11 @@ Stepwise has ten stages. Each page asks one thing, and the answers build your RE
    - What does your app need to keep track of while it runs?
    - What does the user give your app, and what should happen if it's missing or wrong?
 4. **README Part One.** Decide what you're building it with, and get it set up, before any code.
-   - Where will people use your app: in a browser, on a phone, on a desktop, or in a terminal?
-   - What are you building it with? Name the language, framework and libraries, and say why you picked them.
+   - Where will people use your app: in a browser, on a phone, on a desktop, or in a terminal? (Multiple choice, like the questions below. Phone apps become browser apps, since Stepwise can't run phone apps yet.)
+   - Do you already know which language you'll use? If not, six questions about the app and how you like to work rank Stepwise's six languages: what the app mostly does, how it ships (not asked for browser apps), how types are checked, speed and memory, doing things at once, and how errors are handled. Each answer explains the idea behind it, and "Not sure yet" doesn't count.
+   - Pick your language from the ranked list, each with the reasons behind its place, or Something else.
+   - Does your app need to remember anything, and for whom? How much should your tools do for you? Then pick from a few full stacks for your language and platform, each with a frontend, a backend and where its data lives.
+   - Why these? In your own words. The README's Built with lists the language and stack you picked, then your reasons.
    - Your files, each with what it's for. Stepwise creates them for you.
    - What will you write, run and debug it with?
    - Which version of your language does the app need?

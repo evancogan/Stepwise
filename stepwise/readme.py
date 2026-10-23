@@ -4,6 +4,7 @@ Stepwise only supplies the headings that frame each answer."""
 import re
 from collections.abc import Mapping
 
+from . import choices
 from .languages import detect
 from .prereqs import dependency_file
 from .stages import PART_TWO_SECTIONS, QUESTIONS, SECTIONS
@@ -36,7 +37,7 @@ def draft(project: Project, live: Mapping[str, str] | None = None, here: str | N
     kind, _, target = (here or "").partition(":")
 
     def text(key: str) -> str:
-        value = (live[key] if key in live else project.answer(key)).strip()
+        value = choices.shown(key, (live[key] if key in live else project.answer(key)).strip())
         if key != here:
             return value
         return highlight(value) if value else f"***{PLACEHOLDER}***"
@@ -85,7 +86,12 @@ def draft(project: Project, live: Mapping[str, str] | None = None, here: str | N
             done = [bool(project.answer(f"test{n}.done")) for n in range(1, len(tests) + 1)]
             body.append(checklist(tests, done, list_here("tests")))
         for q in (q for q in questions if q.section == section and q.key != "lang.version"):
-            if answer := text(q.key):
+            answer = text(q.key)
+            # Built with opens with the language and stack picked from Stepwise's lists, then the user's reasons.
+            if q.key == "stack.built" and (picks := "\n".join(choices.built_with(project.answer))):
+                picks = highlight(picks) if here in choices.STACK_KEYS else picks
+                answer = f"{picks}\n\n{answer}" if answer else picks
+            if answer:
                 if q.code and q.key != here:  # a highlight inside a code block would show as literal **
                     answer = f"```\n{answer}\n```"
                 body += [f"### {q.heading}", answer] if q.heading else [answer]

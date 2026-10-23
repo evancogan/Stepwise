@@ -17,14 +17,15 @@ from textual.widget import Widget
 from textual.widgets import Button, Footer, Input, Label, Markdown, OptionList, Static
 from textual.widgets.option_list import Option
 
-from .answer import AnswerArea, AnswerLine, SavesAnswer
+from . import choices
+from .answer import AnswerArea, AnswerChoice, AnswerLine, SavesAnswer
 from .coding import CodePanel
 from .pages import Page, page_done, page_missing, pages
 from .prereqs import CheckPanel, DependencyPanel
 from .readme import draft, part_two
 from .runner import RunPanel
-from .stages import (INTROS, LAST_BUILT, PSEUDO_PRIMER, PSEUDO_WORDS, PSEUDOCODE_URL, RESOURCES_QUESTION,
-                     SEARCH_URL, TEST_PRIMER, TITLES, search_query)
+from .stages import (INTROS, LANGUAGE_RANKED, LAST_BUILT, PHONE_NOTE, PSEUDO_PRIMER, PSEUDO_WORDS, PSEUDOCODE_URL,
+                     RESOURCES_QUESTION, SEARCH_URL, TEST_PRIMER, TITLES, search_query)
 from .steps import StepEditor
 from .store import Project, git_root, projects_dir, slugify
 
@@ -148,7 +149,8 @@ class StepwiseApp(App):
         await container.remove_children()
         await container.mount_all(self.page_widgets(here))
         container.scroll_home(animate=False)
-        if field := next(iter(self.query("#stage AnswerArea, #stage AnswerLine, #stage StepEditor Input")), None):
+        if field := next(iter(self.query("#stage AnswerArea, #stage AnswerLine, #stage AnswerChoice, "
+                                         "#stage StepEditor Input")), None):
             field.focus()
         self.schedule_preview()
 
@@ -289,7 +291,7 @@ class StepwiseApp(App):
         if not preview.display:
             return
         here = self.pages[self.page]
-        focus = {"answer": here.key, "list": f"list:{here.key}", "code": f"code:{here.key}:{here.item}",
+        focus = {"answer": here.key, "choice": here.key, "list": f"list:{here.key}", "code": f"code:{here.key}:{here.item}",
                  "deps": "deps"}.get(here.kind)
         live = {field.key: field.text for field in self.answer_fields()}
         markdown = self.query_one("#preview-md", Markdown)
@@ -318,13 +320,18 @@ class StepwiseApp(App):
             widgets.append(Label(page.note, classes="section"))
         if page.prompt:
             widgets.append(Label(page.prompt, classes="question"))
-        if page.section and page.kind in ("answer", "list", "code"):
+        if page.section and page.kind in ("answer", "choice", "list", "code"):
             widgets.append(Static(f"→ README · {page.section}", classes="tag"))
 
-        if page.kind == "answer" and page.line:
+        if page.kind == "choice":
+            widgets += self.choice_widgets(page)
+        elif page.kind == "answer" and page.line:
             widgets.append(AnswerLine(page.key, p.answer(page.key), page.placeholder))
             widgets.append(Static(f"Runs in {p.root}", classes="hint", markup=False))
         elif page.kind == "answer":
+            if page.key == "stack.built" and (picks := choices.built_with(p.answer)):
+                widgets.append(Static("\n".join(line.removeprefix("- ") for line in picks), classes="quote",
+                                      markup=False))
             widgets.append(AnswerArea(page.key, p.answer(page.key), page.placeholder))
             if page.key.startswith("pseudo") and page.key[6:].isdigit():
                 widgets.append(Static(f"Pseudocode words: {PSEUDO_WORDS}", classes="hint"))
@@ -368,6 +375,24 @@ class StepwiseApp(App):
         back = Button("‹ Back", id="back", disabled=n == 1 and self.page == 0)
         back.can_focus = False  # so Tab from an answer lands on Next, and Tab, Enter moves forward
         widgets.append(Horizontal(back, Button("Next ›", id="next", variant="primary"), id="nav"))
+        return widgets
+
+    def choice_widgets(self, page: Page) -> list[Widget]:
+        answer = self.project.answer
+        widgets: list[Widget] = []
+        if page.key == "choose.stack":
+            if not choices.picked("choose.language", answer):
+                return [Static("Pick your language first, and the stacks that fit it appear here.",
+                               classes="waiting-note")]
+            if not choices.stacks_for(answer):
+                widgets.append(Static("Stepwise has no ready-made stacks for this language and platform. Pick "
+                                      "Something else and name yours on the next page.", classes="hint"))
+            if answer("choose.runs") == "phone":
+                widgets.append(Static(PHONE_NOTE, classes="hint"))
+        if page.key == "choose.language" and choices.helped(answer):
+            widgets.append(Static(LANGUAGE_RANKED, classes="hint"))
+        widgets.append(AnswerChoice(page.key, choices.options(page.key, answer), answer(page.key)))
+        widgets.append(Static("↑↓ choose · Enter or click pick · Tab, Enter next page", classes="hint"))
         return widgets
 
 

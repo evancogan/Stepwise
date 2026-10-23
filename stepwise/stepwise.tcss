@@ -127,6 +127,18 @@ Label {
     border: round $accent;
 }
 
+AnswerChoice {
+    height: auto;
+    max-height: 30;
+    margin-top: 1;
+    border: round $panel-lighten-2;
+    padding: 0 1;
+}
+
+AnswerChoice:focus {
+    border: round $accent;
+}
+
 #step-input {
     margin-top: 1;
 }

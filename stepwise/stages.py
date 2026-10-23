@@ -27,7 +27,8 @@ INTROS = {
     1: "You came here with an app in mind. Pin it down before you build anything.",
     2: "Break your app into steps, in the order you'll build them. Each step should end in something you can run or see.",
     3: "For each step, write how it works in plain words: the logic, not the code.",
-    4: "Before any code, decide what you're building it with. Research the choices you're unsure of.",
+    4: "Before any code, decide what you're building it with. A few questions about your app narrow down a "
+       "language and a stack; research the choices you're unsure of.",
     5: "Now write the real code, one step at a time, in your editor. Stepwise shows the file beside your pseudo-code as you save it. Run your app as you go to see each step work.",
     6: "Time to run it. Stepwise runs your app and shows you what your terminal says.",
     7: "Decide what to test: the things that would hurt most if they quietly broke.",
@@ -85,6 +86,12 @@ FILES_QUESTION = (
     "One per line: the file name, a colon, and what it's for, like tip.py: works out the tip"
 )
 TESTS_QUESTION = "What should you test? One thing per line, in plain words, like: the tip is 0 when the total is 0"
+
+BUILT_WHY = ("Why these? Say what made them right for your app, and name any other libraries you'll use. They're "
+             "listed at the top of Built with in the preview.")
+LANGUAGE_RANKED = "Ranked from your answers. The reasons under each one come from what you picked."
+PHONE_NOTE = ("Stepwise can't run phone apps yet, so these are browser stacks. Make the pages work on a small "
+              "screen and it'll work on a phone.")
 
 RESEARCH_PROMPT = (
     "Before you plan anything, see how others have built something like it. Search, read a few pages, and "
@@ -170,8 +177,20 @@ QUESTIONS: dict[int, list[Question]] = {
                  "How it works", "Input"),
     ],
     4: [
-        Question("stack.runs", "Where will people use your app: in a browser, on a phone, on a desktop, or in a terminal?",
-                 "Tech stack", "Where it runs"),
+        # Multiple choice (the options are in choices.py). Only where it runs goes in the README as
+        # it is; the language and stack become the list at the top of Built with.
+        Question("choose.runs", "Where will people use your app?", "Tech stack", "Where it runs"),
+        Question("choose.decided", "Do you already know which language you'll build it in?"),
+        Question("choose.work", "What will your app spend most of its time doing?"),
+        Question("choose.ship", "How will your app get to the people who run it?"),
+        Question("choose.types", "How should your language handle types?"),
+        Question("choose.memory", "How much control do you want over speed and memory?"),
+        Question("choose.conc", "Will your app need to do several things at once?"),
+        Question("choose.errors", "How would you like errors to be handled?"),
+        Question("choose.language", "Which language will you build it in?"),
+        Question("choose.data", "Does your app need to remember anything once it's closed?"),
+        Question("choose.effort", "How much should your tools do for you?"),
+        Question("choose.stack", "Which stack will you build it with?"),
         Question("stack.built", "What are you building it with? Name the language, framework and libraries, and say why you picked them.",
                  "Tech stack", "Built with"),
         Question("stack.tools", "What will you write, run and debug it with? Your editor, runtime and package manager.",
