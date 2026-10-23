@@ -11,6 +11,7 @@ from textual import on
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical, VerticalScroll
+from textual.css.query import NoMatches
 from textual.screen import Screen
 from textual.widget import Widget
 from textual.widgets import Button, Footer, Input, Label, Markdown, OptionList, Static
@@ -295,7 +296,10 @@ class StepwiseApp(App):
         self._preview_timer = self.set_timer(PREVIEW_AFTER_IDLE, self.refresh_preview)
 
     async def refresh_preview(self) -> None:
-        preview = self.query_one("#preview", VerticalScroll)
+        try:
+            preview = self.query_one("#preview", VerticalScroll)
+        except NoMatches:  # the timer went off while Stepwise was quitting
+            return
         if not preview.display:
             return
         here = self.pages[self.page]
@@ -360,7 +364,7 @@ class StepwiseApp(App):
         elif page.kind == "deps":
             widgets.append(DependencyPanel(p))
         elif page.kind == "check":
-            widgets.append(CheckPanel(p))
+            widgets.append(CheckPanel(p, page.key))
         elif page.kind == "run":
             if page.key == "app":
                 widgets.append(Static("If your app opens a window or keeps running, press Stop once you've "

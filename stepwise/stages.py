@@ -28,7 +28,7 @@ INTROS = {
     2: "Break your app into steps, in the order you'll build them. Each step should end in something you can run or see.",
     3: "For each step, write how it works in plain words: the logic, not the code.",
     4: "Before any code, decide what you're building it with. Research the choices you're unsure of.",
-    5: "Now write the real code, one step at a time, in your editor. Stepwise shows the file beside your pseudo-code as you save it.",
+    5: "Now write the real code, one step at a time, in your editor. Stepwise shows the file beside your pseudo-code as you save it. Run your app as you go to see each step work.",
     6: "Time to run it. Stepwise runs your app and shows you what your terminal says.",
     7: "Decide what to test: the things that would hurt most if they quietly broke.",
     8: "Write each test in plain words first, the same way you wrote your steps.",
@@ -181,11 +181,12 @@ QUESTIONS: dict[int, list[Question]] = {
         Question("setup.steps", "How does someone get those installed? Write the steps you'd give a friend: making a "
                  "virtual environment, installing the libraries, anything else. Stepwise won't run these.",
                  "Prerequisites", "Setting it up"),
+        Question("run.command", "What one command will start your app? Stepwise runs it inside your project "
+                 "folder, just like typing it into a terminal there, so you can try your app as you build it. "
+                 "Like: python main.py",
+                 "Getting started", "Running it", code=True),
     ],
     6: [
-        Question("run.command", "What one command starts your app? Stepwise runs it inside your project folder, "
-                 "just like typing it into a terminal there. Like: python main.py",
-                 "Getting started", "Running it", code=True),
         Question("run.result", "It ran! What did you see, and how does it compare to what you described back in stage 1?",
                  "Status"),
         Question("run.limits", "Try to break it: leave something blank, type something wrong, use a huge number. What happens?",

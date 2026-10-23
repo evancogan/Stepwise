@@ -10,6 +10,7 @@ from textual.containers import Horizontal, Vertical
 from textual.widgets import Button, Checkbox, Label, Select, Static, TextArea
 
 from .answer import AnswerArea
+from .runner import RunPanel
 from .store import Project
 
 REFRESH_EVERY = 1.0  # seconds between checks of the file on disk
@@ -65,6 +66,11 @@ class CodePanel(Vertical):
                     yield Button("Open in VS Code", id="open-file")
                 yield Static(id="file-status")
             yield TextArea("", read_only=True, soft_wrap=False, show_line_numbers=True, id="file-view")
+            if self.kind == "steps":
+                yield Label("Try it", classes="minor")
+                yield Static("Run your app to see this step work. Runs here are just for trying it out: stage 6 "
+                             "is the run that counts.", classes="hint")
+                yield RunPanel(p, "app", step=self.n)
             yield Checkbox("It's written and saved", value=bool(p.answer(f"{self.prefix}.done")), id="done",
                            disabled=not ready)
         yield Label("Stuck? What did you expect to happen, and what happened instead?", classes="question")

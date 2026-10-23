@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 
-from .prereqs import deps_missing
+from .prereqs import check_state, deps_missing
 from .stages import (FILES_QUESTION, INTENT_QUESTION, LAST_BUILT, PSEUDO_PLACEHOLDER, QUESTION, RESEARCH_PROMPT,
                      TESTS_QUESTION, TEST_PLACEHOLDER)
 from .store import Project
@@ -14,7 +14,8 @@ class Page:
 
     kind: "answer", "list" (key is the list: steps, files, tests or resources, which also has the search button), "info" (key is the primer:
     pseudo or tests), "deps" (the dependency file), "code" (key is steps or tests, item is the
-    position), "check" (the prerequisites check), "run" (key is app or tests), "readme", "part2",
+    position), "check" (the prerequisites check; key is setup in stage 4 or app in stage 6), "run"
+    (key is app or tests), "readme", "part2",
     "empty" (stands in for pages that need steps or tests the user hasn't added yet) or "done".
     """
     kind: str
@@ -75,12 +76,14 @@ def pages(project: Project, stage: int) -> list[Page]:
                 question("stack.tools"),
                 question("lang.version", label="Language version"),
                 Page("deps", section="Prerequisites", label="Dependency file"),
-                question("setup.steps", label="Setting it up"), Page("readme", label="README draft")]
+                question("setup.steps", label="Setting it up"),
+                Page("check", "setup", section="Prerequisites", label="Check your setup"),
+                question("run.command"), Page("readme", label="README draft")]
     if stage == 5:
         return [Page("code", "steps", f"Step {n} of {len(steps)}: {step}", "Build plan",
                      label=f"Step {n}: {step}", item=n) for n, step in enumerate(steps, 1)] or [STEP_CODE]
     if stage == 6:
-        return [question("run.command"), Page("check", section="Prerequisites", label="Check prerequisites"),
+        return [Page("check", "app", section="Prerequisites", label="Check prerequisites"),
                 Page("run", "app", section="Getting started", label="Run it"), question("run.result"),
                 question("run.limits", note="Look back: now that it runs, see how it holds up."),
                 question("run.diff")]
@@ -119,7 +122,7 @@ def page_missing(project: Project, page: Page) -> str:
         return "Use one command on one line. Setup steps go in stage 4, under Setting it up."
     if page.kind == "deps" and (problem := deps_missing(project)):
         return problem
-    if page.kind == "check" and project.get("prereq_check") != "ok":
+    if page.kind == "check" and project.get(check_state(page.key)) != "ok":
         return "Fix what the check found, then press Check again."
     if page.kind == "code":
         if page.key == "steps":

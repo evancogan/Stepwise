@@ -209,7 +209,9 @@ class Project:
             for file_name, _ in self.files():
                 self.create_file(file_name)
         if name == "files":
-            self.set("prereq_check", "")  # the languages and imports to check may have changed
+            # The languages and imports to check may have changed.
+            self.set("setup_check", "")
+            self.set("prereq_check", "")
         self.write_notes()
 
     def steps(self) -> list[str]:

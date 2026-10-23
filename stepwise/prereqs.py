@@ -21,6 +21,12 @@ from .store import Project
 LIVE_CAPABLE = {"python", "javascript", "go"}  # languages whose installed tool can list its own built-ins
 
 
+def check_state(key: str) -> str:
+    """Where a check's result is kept. Stage 4's ("setup") checks the tools are there before any code
+    is written; stage 6's ("app") checks again against what the finished code imports."""
+    return "setup_check" if key == "setup" else "prereq_check"
+
+
 @dataclass
 class Finding:
     ok: bool | None  # True passed, False blocks moving on, None is a heads-up that doesn't
@@ -86,12 +92,15 @@ async def check_language(project: Project, lang: Language) -> list[Finding]:
         findings.append(Finding(False, f"{problem} Press Edit dependency file to fix it."))
 
     imports, notes = [], []
+    written = False  # before any code exists, every library listed looks unused
     for name in code_files(project, lang):
         path = project.code_path(name)
         if path is None or not path.is_file():
             continue
+        text = path.read_text(encoding="utf-8", errors="replace")
+        written = written or bool(text.strip())
         try:
-            imports += lang.scan(path.read_text(encoding="utf-8", errors="replace"), name)
+            imports += lang.scan(text, name)
         except SyntaxError as e:
             notes.append(f"Couldn't read the imports in {name}: line {e.lineno} has a syntax error.")
     deps_path = lang.dep_path(project)
@@ -120,7 +129,7 @@ async def check_language(project: Project, lang: Language) -> list[Finding]:
                 files = ", ".join(sorted({i.file for i in uses}))
                 findings.append(Finding(severity, f"Your code imports {package} (in {files}), but {file_name} "
                                                   "doesn't list it. Add it by the name you'd install it with."))
-        for dep in real_deps:
+        for dep in real_deps if written else []:
             if not dep.startswith("@types/") and not any(lang.matches(i, dep, builtins) for i in libraries):
                 findings.append(Finding(None, f"{file_name} lists {dep}, but your code doesn't import it. Remove "
                                               "it if you don't use it any more."))
@@ -142,9 +151,12 @@ async def check_language(project: Project, lang: Language) -> list[Finding]:
 
 
 class CheckPanel(Vertical):
-    def __init__(self, project: Project):
+    """`key` is "setup" (stage 4, before any code) or "app" (stage 6, before the real run)."""
+
+    def __init__(self, project: Project, key: str):
         super().__init__(classes="check-panel")
         self.project = project
+        self.key = key
         self.ready = bool(project.files())  # what to check comes from the files listed in stage 4
 
     def compose(self) -> ComposeResult:
@@ -152,8 +164,14 @@ class CheckPanel(Vertical):
             yield Static("Stepwise checks your prerequisites once you've listed your files in stage 4.",
                          classes="waiting-note")
         with Vertical(classes="panel-body" + ("" if self.ready else " waiting")):
-            yield Static("Before running your app, Stepwise checks your prerequisites from your project folder, "
-                         "using the same terminal setup it runs your app with.", classes="intro")
+            if self.key == "setup":
+                yield Static("Before you write any code, Stepwise checks that your language and the libraries in "
+                             "your dependency file are installed. It checks from your project folder, using the "
+                             "same terminal setup it runs your app with.", classes="intro")
+            else:
+                yield Static("Before running your app, Stepwise checks your prerequisites from your project folder, "
+                             "using the same terminal setup it runs your app with. This time it also compares "
+                             "your dependency file with what your code imports.", classes="intro")
             with Horizontal(classes="run-buttons"):
                 yield Button("Check again", id="check", variant="primary", disabled=not self.ready)
                 yield Button("Edit dependency file", id="edit-deps", disabled=not self.ready)
@@ -177,12 +195,14 @@ class CheckPanel(Vertical):
         results.update("[dim]Checking…[/]")
         findings = await check(self.project)
         passed = bool(findings) and all(f.ok is not False for f in findings)
-        self.project.set("prereq_check", "ok" if passed else "failed")
-        self.project.log("prereq_check", passed=passed, findings=[f.text for f in findings if f.ok is not True])
+        self.project.set(check_state(self.key), "ok" if passed else "failed")
+        self.project.log("prereq_check", stage=self.key, passed=passed,
+                         findings=[f.text for f in findings if f.ok is not True])
         marks = {True: "[green]✓[/]", False: "[red]✗[/]", None: "[yellow]•[/]"}
         lines = [f"{marks[f.ok]} {escape(f.text)}" for f in findings]
         lines.append("")
-        lines.append("[green]Everything's in place. Press Next to run your app.[/]" if passed
+        then = "say how to start your app" if self.key == "setup" else "run your app"
+        lines.append(f"[green]Everything's in place. Press Next to {then}.[/]" if passed
                      else "[red]Fix the ✗ items, then press Check again.[/]")
         results.update("\n".join(lines))
         self.app.refresh_sidebar()
