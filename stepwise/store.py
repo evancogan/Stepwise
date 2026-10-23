@@ -5,8 +5,11 @@ Layout, inside the project folder:
   .stepwise/<list>.txt      one item per line, for the steps, files and tests lists
   .stepwise/answers/*.txt   one file per answer: intent, each question's key, and per-item answers
   .stepwise/usage.jsonl     one JSON event per line: how the user moved through Stepwise
-  notes.md                  every answer, rebuilt on each save
+  .stepwise/.gitignore      keeps the usage log out of git, so the answers can be committed without it
+  notes.md                  every answer, rebuilt on each save (in .stepwise/ if the folder has a notes.md of its own)
   README.md                 drafted from the answers in stage 4, extended in stage 10, written by the user
+
+The folder can be an existing repo. Stepwise never writes over a file it didn't make there.
 """
 
 import hashlib
@@ -32,9 +35,22 @@ ITEM_KEYS = {
 }
 
 
+# Folders of installed libraries and build output, not the user's own code. Folders starting with a
+# dot (.git, .venv, .stepwise) are skipped too.
+NOT_SOURCE = {"node_modules", "venv", "env", "__pycache__", "target", "build", "dist", "out", "vendor"}
+
+NOTES_INTRO = "Your answers from Stepwise, by stage."  # also how Stepwise tells its own notes.md apart
+
+
 def projects_dir() -> Path:
     """Where new projects go: outside the Stepwise source, so launching from the repo never adds to it."""
     return Path(os.environ.get("STEPWISE_HOME") or Path.home() / "Stepwise")
+
+
+def git_root(start: Path) -> Path | None:
+    """The top of the git repo `start` is in, or None. .git is a file in worktrees and submodules."""
+    start = start.resolve()
+    return next((folder for folder in (start, *start.parents) if (folder / ".git").exists()), None)
 
 
 def slugify(name: str) -> str:
@@ -78,11 +94,24 @@ class Project:
         return project if (project.meta / "state").is_file() else None
 
     @classmethod
+    def find_up(cls, start: Path) -> "Project | None":
+        """The project `start` is inside: the nearest folder at or above it with a .stepwise, the way
+        git finds .git, so Stepwise opens the same project from any subfolder."""
+        start = start.resolve()
+        return next((p for folder in (start, *start.parents) if (p := cls.find(folder))), None)
+
+    @classmethod
     def create(cls, root: Path, name: str) -> "Project":
         project = cls(root)
         project.answers.mkdir(parents=True, exist_ok=True)
         if not (project.meta / "state").is_file():
-            project._write_state({"name": name, "stage": "1"})
+            state = {"name": name, "stage": "1"}
+            # A README that was here first is the repo's, not the user's README Part One.
+            if project.readme.is_file():
+                state["readme_before"] = sha(project.readme_text())
+            project._write_state(state)
+        if not (ignore := project.meta / ".gitignore").exists():
+            _write(ignore, "usage.jsonl\n*.tmp\n")
         return project
 
     # --- state ---------------------------------------------------------
@@ -180,7 +209,9 @@ class Project:
             for file_name, _ in self.files():
                 self.create_file(file_name)
         if name == "files":
-            self.set("prereq_check", "")  # the languages and imports to check may have changed
+            # The languages and imports to check may have changed.
+            self.set("setup_check", "")
+            self.set("prereq_check", "")
         self.write_notes()
 
     def steps(self) -> list[str]:
@@ -204,6 +235,15 @@ class Project:
             return None
         path = (self.root / name).resolve()
         return path if path.is_relative_to(self.root) and path != self.root else None
+
+    def source_files(self, suffix: str) -> list[Path]:
+        """The project's own files ending in `suffix`. In a real repo, a plain recursive search would
+        read every installed library too, slowly, and count their modules as the user's."""
+        found = []
+        for folder, dirs, files in os.walk(self.root):
+            dirs[:] = [d for d in dirs if d not in NOT_SOURCE and not d.startswith(".")]
+            found += [Path(folder, f) for f in files if f.endswith(suffix)]
+        return found
 
     def create_file(self, name: str) -> None:
         """Creates an empty file for the user to write in. Never touches an existing file."""
@@ -258,12 +298,16 @@ class Project:
     def readme(self) -> Path:
         return self.root / "README.md"
 
+    @property
+    def readme_draft(self) -> Path:
+        return self.root / "README.draft.md"
+
     def write_draft(self, text: str) -> Path:
-        """Writes the generated draft to README.md, unless the user has edited it since the
-        last draft; then it goes to README.draft.md so their writing is never overwritten."""
+        """Writes the generated draft to README.md, unless the user has edited it since the last
+        draft or it was here before Stepwise; then it goes to README.draft.md so it's never overwritten."""
         target = self.readme
         if self.readme.exists() and not self.readme_is_draft():
-            target = self.root / "README.draft.md"
+            target = self.readme_draft
         _write(target, text)
         if target == self.readme:
             self.set("draft_sha", sha(text))
@@ -276,8 +320,12 @@ class Project:
         """True while README.md is exactly what Stepwise generated."""
         return self.readme.is_file() and sha(self.readme_text()) == self.get("draft_sha")
 
+    def readme_is_original(self) -> bool:
+        """True while README.md is still the one the folder had before Stepwise."""
+        return self.readme.is_file() and sha(self.readme_text()) == self.get("readme_before")
+
     def readme_written(self) -> bool:
-        return self.readme.is_file() and not self.readme_is_draft()
+        return self.readme.is_file() and not self.readme_is_draft() and not self.readme_is_original()
 
     def append_part_two(self, text: str) -> None:
         """Adds Part Two's sections to the end of README.md, leaving everything above untouched."""
@@ -294,11 +342,21 @@ class Project:
 
     # --- notes.md ------------------------------------------------------
 
+    @property
+    def notes(self) -> Path:
+        """notes.md, unless the folder has a notes.md Stepwise didn't write: that one is left alone,
+        and Stepwise's notes go in .stepwise/notes.md instead."""
+        path = self.root / "notes.md"
+        if path.is_file():
+            with open(path, encoding="utf-8", errors="replace") as f:
+                if NOTES_INTRO not in f.read(1000):
+                    return self.meta / "notes.md"
+        return path
+
     def write_notes(self) -> None:
         """notes.md collects every answer under the question that prompted it."""
         out = [f"# {self.name}: notes\n",
-               "Your answers from Stepwise, by stage. Stepwise rewrites this file, "
-               "so keep your own edits elsewhere.\n"]
+               f"{NOTES_INTRO} Stepwise rewrites this file, so keep your own edits elsewhere.\n"]
         steps, tests = self.steps(), self.tests()
         for stage in range(1, LAST_BUILT + 1):
             parts = []
@@ -338,4 +396,4 @@ class Project:
             if parts:
                 out.append(f"## {stage}. {TITLES[stage - 1]}\n")
                 out += parts
-        _write(self.root / "notes.md", "\n".join(out))
+        _write(self.notes, "\n".join(out))

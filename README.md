@@ -9,66 +9,89 @@ Stepwise is designed to make you, the human, the vibecoder. It asks you leading 
 
 Stepwise does not use any form of AI or AI tooling to help you achieve your goals. The only person writing code is you. The app merely pushes its users to think about their app in an actionable way.
 
+# Quick start
+
+**1. Install it.** Stepwise needs Python 3.11 or newer. [uv](https://docs.astral.sh/uv/) installs it as a command you can run from any folder, and downloads a suitable Python first if you don't have one:
+
+```bash
+uv tool install git+https://github.com/evancogan/Stepwise
+```
+
+To try it without installing, run `uvx --from git+https://github.com/evancogan/Stepwise stepwise`. Later, `uv tool upgrade stepwise` gets the latest version and `uv tool uninstall stepwise` removes it.
+
+**2. Start a project.** Run `stepwise` and type your app's name. The project goes in `~/Stepwise/<name>`, or under `STEPWISE_HOME` if you set it. To build inside a repo you already have, run `stepwise` there and choose Start here (see [Using it in a repo](#using-it-in-a-repo)).
+
+**3. Answer one page at a time.** Each page asks one thing. Type your answer, then press Tab and Enter to move on. The sidebar opens any stage, and the README preview beside the questions shows where each answer will go.
+
+| Key | Does |
+| --- | --- |
+| Tab, then Enter | Next page |
+| Ctrl+N / Ctrl+B | Next / back |
+| Ctrl+R | Show or hide the README preview |
+| Ctrl+Q | Quit |
+
+**4. Keep your editor open beside it.** From stage 5 you write the code yourself, in your own editor. Stepwise creates the files you list in stage 4, shows each one beside its pseudo-code as you save, and runs your app and tests for you. If VS Code's `code` command is installed, Stepwise opens files in it for you.
+
+**5. Stop whenever you like.** Answers save after 5 seconds without typing, and whenever you leave a field or quit. To carry on, run `stepwise` in the project folder or any folder inside it, run `stepwise ~/Stepwise/<name>` from anywhere, or type the same name on the start screen.
+
+Everything lives in the project folder: your code, `README.md`, `notes.md` (every answer, by stage) and `.stepwise/`, where Stepwise keeps its own records.
+
+# Using it in a repo
+
+Run `stepwise` inside any git repo and it offers to build your app there. It adds a `.stepwise` folder for your answers and never writes over a file it didn't make:
+
+- If the repo already has a `README.md`, your draft goes to `README.draft.md`, and stage 4 is done once you've brought what you want from it into `README.md`.
+- If the repo already has a `notes.md`, Stepwise keeps its notes in `.stepwise/notes.md` instead.
+- The usage log stays out of git, so you can commit `.stepwise` to keep your answers with your code.
+
+Run `stepwise` from any subfolder and it finds the project, the way git finds the repo. Outside a repo, new projects go to `~/Stepwise` (or `STEPWISE_HOME`), and `stepwise <folder>` opens or creates a project in any folder.
+
 # Flow
 
-The steps in stepwise are as follows:
+Stepwise has ten stages. Each page asks one thing, and the answers build your README and `notes.md`. The sidebar opens any stage at any time, but only finishing your furthest stage moves you on.
 
-1. **Idea Generation**: You start by coming up with an app idea. This is saved as your intent.
-Questions: 
-- If you could only ship one screen, what would be on that screen?
-- What's the one thing this app does that nothing else you've used does?
+1. **Idea.** Pin your app down before you build anything.
+   - Describe your app in a sentence or two. Who is it for, and what does it do for them?
+   - Research: a button searches for "how to build your own" plus your app's name, and you add the links that helped. They become the README's Further resources.
+   - Your notes: what did you learn? Anything that surprised you or changed your plan.
+   - Walk through using your app once, start to finish. What does the user see, and what do they do?
+   - Why are you building this, and why build it yourself?
+2. **Step Breakdown.** Break the app into steps, in the order you'll build them. Each step should end in something you can run or see.
+   - Your steps, one per line.
+   - Walk through your app once more using your steps. If a moment isn't covered by any step, go back and add one.
+   - Once the first version works, what would you add next?
+3. **Pseudo Implementation.** Write how each step works in plain words: the logic, not the code.
+   - A short primer on the pseudocode style Stepwise uses (ASK, SHOW, SET, IF / OTHERWISE, REPEAT, FOR EACH, STOP).
+   - One page per step, for its pseudocode.
+   - What does your app need to keep track of while it runs?
+   - What does the user give your app, and what should happen if it's missing or wrong?
+4. **README Part One.** Decide what you're building it with, and get it set up, before any code.
+   - Where will people use your app: in a browser, on a phone, on a desktop, or in a terminal?
+   - What are you building it with? Name the language, framework and libraries, and say why you picked them.
+   - Your files, each with what it's for. Stepwise creates them for you.
+   - What will you write, run and debug it with?
+   - Which version of your language does the app need?
+   - Your dependency file (requirements.txt, package.json, go.mod, Cargo.toml, pom.xml or a .csproj), shown as you edit it.
+   - How does someone get those installed? The steps you'd give a friend.
+   - Check your setup: Stepwise checks that your language and the libraries you listed are installed.
+   - What one command will start your app?
+   - README draft: Stepwise builds Part One from your answers, and you edit it until it reads well.
+5. **Syntax Implementation.** Write the real code, one step at a time, in your own editor. Each step's page shows its pseudocode beside the file as you save it, with a Run button for trying your app as you go. A step can only be ticked done once its file has changed since the last step in it was ticked.
+6. **App Execution.** Stepwise checks your prerequisites again, this time against what your code imports, then runs your app. If it asks for input, you type it under the output. A failed run shows where the error points in your code, what that kind of error usually means, and a button to search for it, then asks you to explain it in your own words before trying again.
+   - It ran! What did you see, and how does it compare to what you described back in stage 1?
+   - Try to break it: leave something blank, type something wrong, use a huge number. What happens?
+   - Where did your code end up different from your pseudo-code?
+7. **Test Steps.** Decide what to test, one thing per line in plain words: the things that would hurt most if they quietly broke.
+8. **Pseudo Test Implementation.** A short primer on writing a test as GIVEN, WHEN and THEN, then one page per test to write it that way.
+9. **Syntax Test Implementation.** Name your test file, write each test in it, then give the command that runs them. Stepwise runs your tests, and a failure asks which test failed and whether the test or the app is wrong.
+10. **Review and README Part Two.** Look back at what you built, then finish your README.
+    - Which step did everything else depend on, and how did that play out?
+    - Which part was hardest to build, and what made it hard? Your notes from building it are shown beside the question.
+    - Which choice from stage 4 would you make differently now, and why?
+    - If you started this app over tomorrow, what would you do differently?
+    - README Part Two: Stepwise adds the sections your app has earned since Part One, and you edit them.
 
-   This stage ends with a research page: a button opens a Google search for "how to build" plus your idea, and you list the links that helped. They become the README's Further resources.
-
-
-2. **Step Breakdown**: The app then prompts you to break down your idea into smaller, manageable steps.
-Questions:
-- Which step, if you got it wrong, would break everything after it?
-- Which steps depend on something you haven't built yet, and which could you start today?
-- If you had half the time, what would you cut, and what would the app lose?
-3. **Pseudo Implementation**: You then attempt to implement each step in a pseudo manner, focusing on the logic rather than the actual code.
-Questions:
-- For each step, what goes in, what comes out, and what does the app have to remember between runs?
-- Where does your logic depend on outside input, and what happens when that input is missing or wrong?
-- Which part of your pseudo-code would be hardest to explain to someone who doesn't know your app?
-4. **README Part One**: You start drafting the README for your app, capturing the initial idea, steps, and most importantly, stack and frameworks, dependencies, and any other relevant information. This is effectively a research step, but the user must have a clear idea of what stack they will need, as the syntax is relevant for the next step.
-Questions:
-- Where does this app run, and who needs to open it there?
-- What does the user see, what handles the logic, and where does the data live? Name one tool for each and say why you chose it.
-- Which of your choices would be expensive to change in six months? Research those first.
-- For each library, what problem does it solve that you couldn't solve in a few hundred lines? What does it cost you?
-- Which part of the system must talk to which other part, and what breaks if one side is slow?
-- Which choice are you least sure about, and what's the cheapest way to test it before you commit?
-5. **Syntax Implementation**: You then translate your pseudo implementation into actual code, ensuring that the syntax is correct and the program functions as intended.
-Questions:
-- Before you write a function, what does it promise its callers, and what does it not promise?
-- Where does state live, and which code is allowed to change it?
-- When something breaks, can you say what you expected and what you got? If not, that's what you need to learn next.
-6. **App Execution**: Finally, you run your app to see it in action, rewarding you with the fruit of your own work and progress.
-Questions:
-- What's the smallest path through the app that runs end to end, touching every layer?
-- What would someone who didn't build it try first, and what would they expect to happen?
-- What did running it teach you about your design that you didn't expect?
-7. **Test Steps**: After completing execution, you write tests in steps to make sure each part of your app works correctly and as intended.
-Questions:
-- Which part of the app, if it broke silently, would do the most damage?
-- What's the simplest check that would tell you that part still works after a change?
-- If this test passes, what has been proven, and what hasn't?
-8. **Pseudo Test Implementation**: You then attempt to write tests in a pseudo manner, focusing on the logic and structure of the tests rather than the actual code.
-Questions:
-- For each test, what's the setup, the action, and the expected result?
-- What input would most likely break your logic, and is there a test for it?
-- If you rewrote the internals, would your tests still be valid? Are you testing behavior or implementation?
-9. **Syntax Test Implementation**: Finally, you translate your pseudo tests into actual test code, ensuring that the tests are correctly implemented and effectively validate your app's functionality.
-Questions:
-- Does your testing framework fit how you structured your modules, or do you need to change one?
-- When a test fails, can you tell from the message alone what went wrong?
-- Which test would you trust least, and why?
-10. **Review and README Part Two**: Finally, you review your entire app, make any necessary adjustments, and write the README to reflect the current state and functionality of your app. This forces a big-picture reflection on your work and ensures that your project is well-documented.
-Questions:
-- Which decision in step 4 turned out to be wrong, and what would you change?
-- If a stranger read this README, what would they still have to guess?
-- What would you do differently if you started this app over tomorrow?
+After stage 10, a Finish page sums up what you built, from your own record.
 
 # What We Learned
 
@@ -96,3 +119,7 @@ Questions:
 - **Search, collect and reflect are three different jobs, so don't crowd them.** The research page was a lone search button, with the links on the next page and the notes box squeezed in beside the search. Search and link entry now share one page (search first, links below, so the links come from what was just found), and the notes get a page to themselves so a longer "what I learned" has room. The notes keep the same answer key, so they still feed the "What I learned from research" README section.
 - **Let people see what they're biting into.** Next used to refuse to leave a page with a missing answer, and then a "Not done yet" check stopped you at the end of a stage, even though the sidebar let you jump anywhere. A lock that can be walked around only gets in the way, and someone sizing up the whole process should be able to click straight through it with nothing filled in. Nothing blocks Next now. The sidebar ticks and the generated README still show exactly what's missing.
 - **Don't let the tool's data live in the tool's own repo.** Projects were created in whatever folder Stepwise was launched from, so running it from its own source folder filled the repo with sample projects. New projects now go to `~/Stepwise` (or `STEPWISE_HOME`), and the old samples were moved there. Nothing broke on the move because every run, file check and dependency lookup works from the project's own folder, not from where Stepwise was started.
+- **A tool dropped into someone's repo can't assume the folder is empty.** Stepwise only ever ran in folders it had made, so it rebuilt `notes.md` on every save without looking at what was there, counted a repo's existing README as the user's README Part One, and searched every folder for the user's own modules, `node_modules` and `target` included. It now leaves a `notes.md` or README it didn't write alone, skips folders of installed libraries and build output, finds its project from any subfolder, and offers to start in the repo it's run from.
+- **A plan that says "run each step" needs a way to run each step.** Stage 2 asks for steps that each end in something you can run or see, but nothing could run until stage 6, after every step was written, and the libraries weren't checked until then either. The run command and a first setup check now come in stage 4, and every stage 5 step has a Run button for trying the app as it grows. Those runs are only for trying it out: stage 6 is still the run that counts.
+- **An app that asks a question needs somewhere to answer it.** The run panel read the app's output a whole line at a time and never connected its input, so a terminal app's `input("Total: ")` never showed its prompt and nothing typed could reach it, even though the pseudocode primer's own example starts with ASK. Output now shows as it's printed, so a prompt appears straight away, and a box under it sends what you type to the app. Full-screen terminal apps still need a real terminal.
+- **Asking someone to explain an error helps more once they can read it.** A failed run asked the user to explain the error in their own words, but a beginner faced with a traceback often can't tell which line is theirs. Stepwise now picks out the error, points at the line of the user's own code it came from (skipping library code), and says in plain words what that kind of error usually means, without saying how to fix it. A search button looks the error up, leaving out the paths and quoted names that only the user's code has, so it finds other people asking about the same error. For an error Stepwise doesn't recognise, it searches for the last line the app printed.

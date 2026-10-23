@@ -131,7 +131,9 @@ Label {
     margin-top: 1;
 }
 
-.readme-panel {
+/* A Vertical is as tall as the visible stage by default, and hides what doesn't fit. Panels grow
+   with their content instead, so the stage scrolls to show all of it. */
+.readme-panel, .run-panel, .code-panel, .check-panel, .deps-panel {
     height: auto;
 }
 
@@ -208,6 +210,19 @@ NameScreen {
     height: 14;
     margin-top: 1;
     border: round $panel-lighten-2;
+}
+
+.trial #output {
+    height: 8;
+}
+
+/* The line the app is still printing, like a prompt waiting for an answer, and the box to answer in. */
+#partial {
+    padding: 0 1;
+}
+
+#send {
+    margin-top: 1;
 }
 
 #run-status {

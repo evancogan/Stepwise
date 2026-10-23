@@ -11,6 +11,7 @@ from textual import on
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical, VerticalScroll
+from textual.css.query import NoMatches
 from textual.screen import Screen
 from textual.widget import Widget
 from textual.widgets import Button, Footer, Input, Label, Markdown, OptionList, Static
@@ -25,7 +26,7 @@ from .runner import RunPanel
 from .stages import (INTROS, LAST_BUILT, PSEUDO_PRIMER, PSEUDO_WORDS, PSEUDOCODE_URL, RESOURCES_QUESTION,
                      SEARCH_URL, TEST_PRIMER, TITLES, search_query)
 from .steps import StepEditor
-from .store import Project, projects_dir, slugify
+from .store import Project, git_root, projects_dir, slugify
 
 TOTAL = len(TITLES)
 PREVIEW_AFTER_IDLE = 0.3  # seconds; the preview is in memory, so it can follow typing closely
@@ -42,13 +43,35 @@ def open_in_code(project: Project, path: Path, what: str) -> None:
         subprocess.Popen([code, str(path)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
+def repo_here() -> Path | None:
+    """The git repo Stepwise was started in, to offer building there. Never Stepwise's own source,
+    so launching from it doesn't fill it with projects."""
+    repo = git_root(Path.cwd())
+    return repo if repo and repo != Path(__file__).resolve().parents[1] else None
+
+
 class NameScreen(Screen):
+    def __init__(self, repo: Path | None):
+        super().__init__()
+        self.repo = repo
+
     def compose(self) -> ComposeResult:
         with Vertical(id="welcome"):
             yield Label("Stepwise", id="welcome-title")
             yield Static("Stepwise asks the questions. You do the thinking and write every line.")
-            yield Label("What's your app called?", classes="question")
+            if self.repo:
+                yield Label("Build your app in this repo?", classes="question")
+                yield Static(str(self.repo), classes="hint", markup=False)
+                yield Button("Start here", id="start-here", variant="primary")
+                yield Label("Or start a new app in its own folder. What's it called?", classes="question")
+            else:
+                yield Label("What's your app called?", classes="question")
             yield Input(placeholder="e.g. Breakout", id="app-name")
+
+    @on(Button.Pressed, "#start-here")
+    def start_here(self) -> None:
+        self.app.project = Project.create(self.repo, self.repo.name)
+        self.dismiss()
 
     @on(Input.Submitted, "#app-name")
     def create(self, event: Input.Submitted) -> None:
@@ -89,7 +112,7 @@ class StepwiseApp(App):
 
     async def on_mount(self) -> None:
         if self.project is None:
-            await self.push_screen(NameScreen(), callback=lambda _: self.call_later(self.start))
+            await self.push_screen(NameScreen(repo_here()), callback=lambda _: self.call_later(self.start))
         else:
             await self.start()
 
@@ -259,7 +282,10 @@ class StepwiseApp(App):
         self._preview_timer = self.set_timer(PREVIEW_AFTER_IDLE, self.refresh_preview)
 
     async def refresh_preview(self) -> None:
-        preview = self.query_one("#preview", VerticalScroll)
+        try:
+            preview = self.query_one("#preview", VerticalScroll)
+        except NoMatches:  # the timer went off while Stepwise was quitting
+            return
         if not preview.display:
             return
         here = self.pages[self.page]
@@ -324,7 +350,7 @@ class StepwiseApp(App):
         elif page.kind == "deps":
             widgets.append(DependencyPanel(p))
         elif page.kind == "check":
-            widgets.append(CheckPanel(p))
+            widgets.append(CheckPanel(p, page.key))
         elif page.kind == "run":
             if page.key == "app":
                 widgets.append(Static("If your app opens a window or keeps running, press Stop once you've "
@@ -370,9 +396,15 @@ class ReadmePanel(Vertical):
 
     def check(self) -> None:
         p = self.project
-        self.query_one("#build-draft", Button).label = "Rebuild draft" if p.readme.exists() else "Build README draft"
+        built = p.readme_draft.exists() if p.readme_is_original() else p.readme.exists()
+        self.query_one("#build-draft", Button).label = "Rebuild draft" if built else "Build README draft"
         if p.readme_written():
             status = "[green]✓ README.md has your edits in it.[/]"
+        elif p.readme_is_original() and p.readme_draft.exists():
+            status = (f"[yellow]Your draft is in {p.readme_draft.name}. Bring what you want from it into "
+                      "README.md and save.[/]")
+        elif p.readme_is_original():
+            status = "[dim]README.md was here before Stepwise. Your draft will go next to it.[/]"
         elif p.readme.exists():
             status = "[yellow]README.md is still the untouched draft. Edit it and save.[/]"
         else:
@@ -385,8 +417,9 @@ class ReadmePanel(Vertical):
         target = self.project.write_draft(draft(self.project))
         self.project.log("readme", action="draft", file=target.name)
         if target != self.project.readme:
-            self.app.notify(f"You've already edited README.md, so the new draft went to {target.name}.",
-                            timeout=8)
+            why = ("README.md was here before Stepwise" if self.project.readme_is_original()
+                   else "You've already edited README.md")
+            self.app.notify(f"{why}, so the new draft went to {target.name}.", timeout=8)
         self.check()
         self.app.refresh_sidebar()
         open_in_code(self.project, target, "draft")
@@ -518,7 +551,7 @@ def main() -> None:
         root = Path(args.project)
         project = Project.find(root) or Project.create(root, root.resolve().name)
     else:
-        project = Project.find(Path.cwd())
+        project = Project.find_up(Path.cwd())
     app = StepwiseApp(project)
     started = time.monotonic()
     app.run()
