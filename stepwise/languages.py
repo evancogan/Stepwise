@@ -284,7 +284,7 @@ class Rust(Language):
         if imp.name in ("crate", "self", "super", "Self"):
             return True
         modules = set()
-        for path in project.root.rglob("*.rs"):
+        for path in project.source_files(".rs"):
             modules |= set(self.MOD.findall(path.read_text(encoding="utf-8", errors="replace")))
             modules.add(path.stem)
         return imp.name in modules
@@ -339,7 +339,7 @@ class Java(Language):
 
     def is_local(self, imp: Import, project: Project, deps_path: Path | None) -> bool:
         packages = set()
-        for path in project.root.rglob("*.java"):
+        for path in project.source_files(".java"):
             packages |= set(self.PACKAGE.findall(path.read_text(encoding="utf-8", errors="replace")))
         package = self.top(imp.name)
         return any(package == p or package.startswith(p + ".") for p in packages)
@@ -388,7 +388,7 @@ class CSharp(Language):
 
     def is_local(self, imp: Import, project: Project, deps_path: Path | None) -> bool:
         spaces = set()
-        for path in project.root.rglob("*.cs"):
+        for path in project.source_files(".cs"):
             spaces |= set(self.NAMESPACE.findall(path.read_text(encoding="utf-8", errors="replace")))
         return any(imp.name == s or imp.name.startswith(s + ".") for s in spaces)
 

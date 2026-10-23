@@ -142,6 +142,9 @@ def page_missing(project: Project, page: Page) -> str:
                 else "Run your tests and get them passing before moving on.")
     if page.kind == "readme" and not project.readme.is_file():
         return "Build your README draft before moving on."
+    if page.kind == "readme" and project.readme_is_original():
+        return ("Build your README draft before moving on." if not project.readme_draft.is_file() else
+                "Bring your draft into README.md and save it before moving on.")
     if page.kind == "readme" and project.readme_is_draft():
         return "Edit your README draft and save it before moving on."
     if page.kind == "part2" and not project.part_two_added():

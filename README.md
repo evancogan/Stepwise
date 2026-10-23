@@ -9,6 +9,26 @@ Stepwise is designed to make you, the human, the vibecoder. It asks you leading 
 
 Stepwise does not use any form of AI or AI tooling to help you achieve your goals. The only person writing code is you. The app merely pushes its users to think about their app in an actionable way.
 
+# Install
+
+Stepwise needs Python 3.11 or newer. [uv](https://docs.astral.sh/uv/) installs it as a command you can run from any folder, and downloads a suitable Python first if you don't have one:
+
+```bash
+uv tool install git+https://github.com/evancogan/Stepwise
+```
+
+`uv tool upgrade stepwise` gets the latest version, and `uv tool uninstall stepwise` removes it.
+
+# Using it in a repo
+
+Run `stepwise` inside any git repo and it offers to build your app there. It adds a `.stepwise` folder for your answers and never writes over a file it didn't make:
+
+- If the repo already has a `README.md`, your draft goes to `README.draft.md`, and stage 4 is done once you've brought what you want from it into `README.md`.
+- If the repo already has a `notes.md`, Stepwise keeps its notes in `.stepwise/notes.md` instead.
+- The usage log stays out of git, so you can commit `.stepwise` to keep your answers with your code.
+
+Run `stepwise` from any subfolder and it finds the project, the way git finds the repo. Outside a repo, new projects go to `~/Stepwise` (or `STEPWISE_HOME`), and `stepwise <folder>` opens or creates a project in any folder.
+
 # Flow
 
 The steps in stepwise are as follows:
@@ -96,3 +116,4 @@ Questions:
 - **Search, collect and reflect are three different jobs, so don't crowd them.** The research page was a lone search button, with the links on the next page and the notes box squeezed in beside the search. Search and link entry now share one page (search first, links below, so the links come from what was just found), and the notes get a page to themselves so a longer "what I learned" has room. The notes keep the same answer key, so they still feed the "What I learned from research" README section.
 - **A lock that can be walked around isn't a lock.** Next refused to leave a page with a missing answer, yet the sidebar let you jump to any page, and the end-of-stage check already catches everything left blank. The page-by-page block only got in the way (it stopped you skipping the description or "About" page and coming back), so Next now moves freely within a stage and the check at the stage's last page is the only gate.
 - **Don't let the tool's data live in the tool's own repo.** Projects were created in whatever folder Stepwise was launched from, so running it from its own source folder filled the repo with sample projects. New projects now go to `~/Stepwise` (or `STEPWISE_HOME`), and the old samples were moved there. Nothing broke on the move because every run, file check and dependency lookup works from the project's own folder, not from where Stepwise was started.
+- **A tool dropped into someone's repo can't assume the folder is empty.** Stepwise only ever ran in folders it had made, so it rebuilt `notes.md` on every save without looking at what was there, counted a repo's existing README as the user's README Part One, and searched every folder for the user's own modules, `node_modules` and `target` included. It now leaves a `notes.md` or README it didn't write alone, skips folders of installed libraries and build output, finds its project from any subfolder, and offers to start in the repo it's run from.
