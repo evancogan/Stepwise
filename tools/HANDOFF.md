@@ -57,8 +57,6 @@ committed, since it holds a home-folder path):
    your version.** Maya wrote "Python 3, probably the newest". The setup check still handled it.
 3. Smaller: the stage 3 pseudocode intro is long for a 16-year-old, and the optional Wikipedia link
    reads as required.
-4. Left over from the gate removal: the README page (`ReadmePanel` in `stepwise/app.py`) still says
-   "Stepwise won't move on until you've edited it.", which is no longer true.
 
 ## Next steps
 

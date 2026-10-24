@@ -406,8 +406,8 @@ class ReadmePanel(Vertical):
     def compose(self) -> ComposeResult:
         yield Label("Now turn your answers into README Part One.", classes="question")
         yield Static("Build a draft from everything you've answered so far, then open it and make it read "
-                     "well: fix the flow, cut what's repeated, add what's missing. Stepwise won't move on "
-                     "until you've edited it.", classes="intro")
+                     "well: fix the flow, cut what's repeated, add what's missing. This page is ticked once "
+                     "README.md has your edits in it.", classes="intro")
         with Horizontal(classes="readme-buttons"):
             yield Button("Build README draft", id="build-draft", variant="primary")
             if shutil.which("code"):
