@@ -1,0 +1,58 @@
+[
+  {
+    "key": "maya",
+    "name": "Maya",
+    "about": "16, in high school. Has done a few Scratch projects and one week of a Python course at school, then stopped. Curious, a bit unsure of herself.",
+    "app_name": "Tip Splitter",
+    "app": "A terminal app for splitting a restaurant bill between friends, with a tip, so nobody has to do the maths on their phone.",
+    "style": "Short, plain sentences. Honest when she doesn't know something. Sometimes misses part of a question."
+  },
+  {
+    "key": "dev",
+    "name": "Dev",
+    "about": "34, backend developer, eight years of Java and Spring at a bank. Wants to try something other than Java on a side project.",
+    "app_name": "Pub Quiz",
+    "app": "A browser-based pub quiz: a host runs rounds from a laptop, teams answer on their phones, and a shared leaderboard updates live.",
+    "style": "Precise and technical. Uses the right terms. Impatient with questions that feel like busywork, but answers properly."
+  },
+  {
+    "key": "sam",
+    "name": "Sam",
+    "about": "41, works in logistics. Hobbyist who has followed a couple of YouTube tutorials and copied code without fully understanding it.",
+    "app_name": "Habit Grid",
+    "app": "A small desktop app that shows a grid of habits by day, so you can tick off what you did and see your streaks.",
+    "style": "Terse, one-line answers, sometimes vague. Picks 'Not sure yet' on technical questions he doesn't follow."
+  },
+  {
+    "key": "priya",
+    "name": "Priya",
+    "about": "29, data analyst. Uses Python with pandas and Jupyter every day, but has never built an app that other people run.",
+    "app_name": "Budget Lens",
+    "app": "A terminal tool that reads her bank's CSV exports, sorts spending into categories and prints a monthly summary with trends.",
+    "style": "Organised and thorough. Writes in short paragraphs or bullet points. Thinks about edge cases in the data."
+  },
+  {
+    "key": "leo",
+    "name": "Leo",
+    "about": "14. Plays a lot of games and wants to make one. Has never written code, but has edited game config files.",
+    "app_name": "Snake Rush",
+    "app": "A snake game in its own window, where the snake speeds up as it eats and the high score is saved.",
+    "style": "Enthusiastic, informal, sometimes off-topic. Lots of ideas, few details. Gets the order of things wrong."
+  },
+  {
+    "key": "ana",
+    "name": "Ana",
+    "about": "26, just finished a web development bootcamp (HTML, CSS, JavaScript, a little React). Job hunting and wants a portfolio project.",
+    "app_name": "Recipe Swap",
+    "app": "A website where people post recipes, save other people's, and search by the ingredients they have at home.",
+    "style": "Clear and motivated. Mentions what employers want. Sometimes over-scopes and lists too many features."
+  },
+  {
+    "key": "tomas",
+    "name": "Tomás",
+    "about": "20, second-year college student. His course requires C# for this project. Comfortable with loops and classes, not much else.",
+    "app_name": "Stock Room",
+    "app": "A desktop inventory app for his part-time job at a bike shop: add parts, track how many are left, and flag what to reorder.",
+    "style": "Practical and direct. Mentions the course requirements. Already knows the language is decided."
+  }
+]
