@@ -7,11 +7,14 @@ Test tooling only. Stepwise never uses AI and nothing in `stepwise/` imports any
 - `mock_user.py` drives the real Stepwise app headlessly (Textual's Pilot), in two modes:
   - `run`: the harness drives and asks a local model (LM Studio / Bionic, OpenAI-compatible API) to
     answer each page as a persona. Works, but on this laptop (CPU inference, Qwen 3.6 35B-A3B with
-    thinking on) it takes about 3.5 minutes a page.
+    thinking on) it takes about 3.5 minutes a page. Next never blocks (since 353a37f, "Remove every
+    gate on moving forward"), so a page the model couldn't fill is recorded as "left unfinished".
   - Turn commands (`start`, `screen`, `type`, `pick`, `press`, `next`, `back`, `open`, `edit`): an agent
     drives, one action per call. Each call reopens the project where the agent left off
-    (`.stepwise/mock-at`), acts, and prints the stage pane in Stepwise's own words. VS Code, the
-    browser and notifications come back as text lines. Runs stop after stage 4 (`END_STAGE`).
+    (`.stepwise/mock-at`), acts, and prints the stage pane in Stepwise's own words, then the
+    sidebar, whose ticks are now the only sign of what's left. VS Code, the browser and
+    notifications come back as text lines. Runs stop once the agent is past stage 4 (`END_STAGE`),
+    and the end lists any pages still unticked.
 - `personas.json`: seven personas (maya, dev, sam, priya, leo, ana, tomas).
 - `../.claude/agents/mock-user.md`: the Haiku agent definition (Bash, WebSearch, WebFetch). Agents
   load at session start, so in the session that made it the run used a general-purpose Haiku agent
@@ -36,7 +39,8 @@ committed, since it holds a home-folder path):
 - **Maya, Haiku agent: done, stages 1-4, nothing stuck.** About 10 minutes for 33 pages. Real
   research links (both checked, both load), in-character answers, valid pseudocode, Python picked as
   the Best match, plain print/input stack, setup check passed, README draft properly edited.
-  Project: `~/Stepwise-mock/tip-splitter`.
+  Project: `~/Stepwise-mock/tip-splitter`. This ran before the gate removal was merged in, with the
+  old "Not done yet" check at the end of each stage.
 - **Maya, Qwen (local): stopped partway into stage 4** (killed to save battery). Its research links
   were invented. Kept at `~/Stepwise-mock/tip-splitter-qwen` for comparison.
 - No other persona has been run with the agent yet.
@@ -53,6 +57,8 @@ committed, since it holds a home-folder path):
    your version.** Maya wrote "Python 3, probably the newest". The setup check still handled it.
 3. Smaller: the stage 3 pseudocode intro is long for a 16-year-old, and the optional Wikipedia link
    reads as required.
+4. Left over from the gate removal: the README page (`ReadmePanel` in `stepwise/app.py`) still says
+   "Stepwise won't move on until you've edited it.", which is no longer true.
 
 ## Next steps
 

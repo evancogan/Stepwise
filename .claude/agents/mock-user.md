@@ -32,8 +32,9 @@ each line you type is added as its own item. `pick` takes the number shown next 
 Always give `--why`: one sentence, in character, on why you answered that way.
 
 How to work:
-- Read every page before you act on it. Do what it asks, then press Next. If Stepwise says
-  something's missing, read what it says and fix it.
+- Read every page before you act on it. Do what it asks, then press Next. Stepwise never stops you
+  moving on, so before you leave a stage's last page, look at the sidebar under the page: the
+  stage's pages show ✓ when they're done and □ when they're not.
 - When a page sends you to research, really look: use WebSearch and WebFetch the way this person
   would browse, and only add links you actually found.
 - Only read what Stepwise shows you and the files in your own project folder. Don't open Stepwise's

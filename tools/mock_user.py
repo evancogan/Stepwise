@@ -50,7 +50,7 @@ from stepwise.pages import Page, page_missing, pages  # noqa: E402
 from stepwise.prereqs import check_state  # noqa: E402
 from stepwise.stages import INTROS, PSEUDO_WORDS, QUESTION, TITLES  # noqa: E402
 from stepwise.store import Project, slugify  # noqa: E402
-from textual.widgets import Button, Input, Static, TextArea  # noqa: E402
+from textual.widgets import Button, Input, OptionList, Static, TextArea  # noqa: E402
 
 URL = "http://127.0.0.1:1235/v1/chat/completions"
 MODEL = "qwen3.6-35b-a3b-rotorquant"
@@ -160,7 +160,7 @@ class Run:
         with open(self.transcript, "a", encoding="utf-8", newline="\n") as f:
             f.write(json.dumps(entry, ensure_ascii=False) + "\n")
         answer = str(data.get("answer", data.get("picked", data.get("note", ""))))
-        print(f"  [{self.app.current}] {page.label[:28]:<28} {data.get('seconds', 0):>5.0f}s  {answer[:90]!r}",
+        print(f"  [{entry['stage']}] {page.label[:28]:<28} {data.get('seconds', 0):>5.0f}s  {answer[:90]!r}",
               flush=True)
 
     async def model(self, prompt: str, max_tokens: int | None = None) -> tuple[str, str, float]:
@@ -246,27 +246,22 @@ class Run:
             panel.check()
             self.record(page, file=project.readme.name, answer=text, reasoning=reasoning, seconds=seconds)
 
-    async def stage(self, n: int) -> bool:
-        """Fills every page of stage `n` and presses Next past its last one. False if it stayed stuck."""
+    async def stage(self, n: int) -> None:
+        """Fills every page of stage `n` and presses Next past its last one. Next never blocks, so a page
+        the model couldn't fill is left behind, and the transcript says which."""
         app = self.app
         await app.go(n, 0)
         await self.pilot.pause(0.3)
-        tries: dict[tuple, int] = {}
         while app.current == n:
             page = app.pages[app.page]
-            where = (page.kind, page.key, page.item)
-            tries[where] = tries.get(where, 0) + 1
-            if tries[where] > 2:
-                missing = [p.label for p in app.pages if page_missing(self.project, p)]
-                self.record(page, note="stuck", missing=missing)
-                return False
             await self.fill(page)
             if self.args.shots:
                 self.shots.mkdir(parents=True, exist_ok=True)
                 app.save_screenshot(str(self.shots / f"{n}-{app.page + 1:02d}-{slugify(page.label)}.svg"))
             await app.action_next()
             await self.pilot.pause(0.3)
-        return True
+        if left := [p.label for p in pages(self.project, n) if page_missing(self.project, p)]:
+            self.record(Page("stage", label=f"Stage {n}"), stage=n, note="left unfinished", missing=left)
 
     async def go(self) -> None:
         first, _, last = self.args.stages.partition("-")
@@ -277,9 +272,7 @@ class Run:
         async with self.app.run_test(size=(170, 48)) as self.pilot:
             await self.pilot.pause(0.5)
             for n in stages:
-                if not await self.stage(n):
-                    print(f"  stuck in stage {n}; see {self.transcript}", flush=True)
-                    break
+                await self.stage(n)
         print(f"  done: reached stage {self.project.stage}. Transcript: {self.transcript}", flush=True)
 
 
@@ -307,7 +300,8 @@ setInterval(tick, 1000); tick();
 
 
 def screen_text(app) -> str:
-    """The stage pane as the user sees it, top to bottom, in Stepwise's own words."""
+    """The stage pane as the user sees it, top to bottom, in Stepwise's own words, then the sidebar: Next
+    never blocks, so its ticks are how Stepwise shows what's still to do."""
     lines = [str(app.query_one("#topbar", Static).render()), ""]
     for w in app.query_one("#stage").query("*"):
         if not all(node.display for node in w.ancestors_with_self):
@@ -327,6 +321,9 @@ def screen_text(app) -> str:
             lines += [f"[{label}]", *(f"  | {line}" for line in str(body).splitlines()), "[end]"]
         elif isinstance(w, Static) and (text := str(w.render()).strip()):
             lines.append(text)
+    sidebar = app.query_one("#sidebar", OptionList)
+    lines += ["", "[sidebar]", *(str(sidebar.get_option_at_index(i).prompt) for i in range(sidebar.option_count)),
+              "[end sidebar]"]
     return "\n".join(lines)
 
 
@@ -424,10 +421,10 @@ class Turn:
             return args.file
         return ""
 
-    def record(self, page: Page, value: str) -> None:
+    def record(self, page: Page, value: str, **data) -> None:
         entry = {"t": time.strftime("%Y-%m-%dT%H:%M:%S"), "persona": self.persona["key"], "by": "agent",
                  "stage": self.app.current, "page": page.key or page.kind, "kind": page.kind,
-                 "action": self.args.command, "value": value, "why": self.args.why}
+                 "action": self.args.command, "value": value, "why": self.args.why, **data}
         if self.args.command == "pick" and (widget := next(iter(self.app.query("#stage AnswerChoice")), None)):
             offered = choices.options(page.key, self.project.answer)
             if 1 <= self.args.number <= len(offered):
@@ -457,7 +454,7 @@ class Turn:
             if self.args.command != "start" and self.at.is_file():
                 stage, page = map(int, self.at.read_text().split())
                 await app.go(stage, page)
-            page = app.pages[app.page]
+            page, before = app.pages[app.page], self.project.stage
             value = await self.act()
             await self.settle()
             app.save_all()
@@ -468,7 +465,14 @@ class Turn:
             for note in self.notes:
                 print(note)
             if self.project.stage > END_STAGE:
-                print(f"\nThat's the end of this test run: you've finished stage {END_STAGE}.")
+                # Next never blocks, so getting past the last stage doesn't mean everything in it was done.
+                left = [f"{p.label} (stage {n})" for n in range(1, END_STAGE + 1)
+                        for p in pages(self.project, n) if page_missing(self.project, p)]
+                if before <= END_STAGE:
+                    self.record(Page("end", label="End of the run"), "", note="end of run", left=left)
+                print(f"\nThat's the end of this test run: you're past stage {END_STAGE}.")
+                if left:
+                    print("Still unticked in the sidebar: " + "; ".join(left))
             else:
                 print(screen_text(app))
 
