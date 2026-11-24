@@ -5,7 +5,7 @@ An interactive learning tool in bash
 
 Stepwise is designed to make you, the human, the vibecoder. It asks you leading questions about your app idea, and then forces you to break it down into 'steps' which you can then tackle one by one. This approach helps you to feel like you're making progress, as well as bring the joy back into problem-solving programming. 
 
-# How it was built:
+# How it was built
 
 I designed Stepwise and directed every part of it: I flowcharted the stages, planned the flow, and built it up through branches and small iterations across VS Code, Claude Code and Claude Desktop, testing each change and pushing back when it got things wrong. Claude wrote most of the code. I also had an agent play mock users to find where the flow broke (tools/mock_user.py). The irony is intentional: Stepwise exists to move vibe-coders away from needing AI for everything, by showing them anything can be broken down, step by step.
 
