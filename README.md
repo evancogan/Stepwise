@@ -1,4 +1,7 @@
 # Stepwise
+
+![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white) ![Textual](https://img.shields.io/badge/TUI-Textual-5A4FCF)
+
 An interactive learning tool in bash
 
 # Why Stepwise?
