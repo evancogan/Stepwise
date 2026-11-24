@@ -7,7 +7,7 @@ Stepwise is designed to make you, the human, the vibecoder. It asks you leading 
 
 # How it was built:
 
-Claude wrote most of Stepwise's code. I directed it: I designed the stages and flow, built it up in small iterations, tested each one, and pushed back when it got things wrong. I also had an agent play mock users to find where the flow broke (tools/mock_user.py). The irony is intentional. Stepwise exists to move vibe-coders away from needing AI for everything, by showing them anything can be broken down, step by step.
+I designed Stepwise and directed every part of it: I flowcharted the stages, planned the flow, and built it up through branches and small iterations across VS Code, Claude Code and Claude Desktop, testing each change and pushing back when it got things wrong. Claude wrote most of the code. I also had an agent play mock users to find where the flow broke (tools/mock_user.py). The irony is intentional: Stepwise exists to move vibe-coders away from needing AI for everything, by showing them anything can be broken down, step by step.
 
 # Quick start
 
